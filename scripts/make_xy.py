@@ -83,8 +83,8 @@ def find_diabetes_drugs_users(filename, dd, chunksize=10, n_jobs=1):
 
     Returns:
     --------------
-    index: set
-        The set of unique patients identifiers that were prescribed to dibates
+    index: list
+        The list of unique patients identifiers that were prescribed to dibates
         drugs in the input pbs file
     """
     manager = Manager()
@@ -107,9 +107,10 @@ def find_diabetes_drugs_users(filename, dd, chunksize=10, n_jobs=1):
     # Collapse the results in a single DataFrame
     index = set()
     for k in results.keys():
-        index.add(results[k])
+        for i in results[k]:  # FIXME find a way to avoid nested loops
+            index.add(i)
 
-    return index
+    return list(index)
 
 
 def find_population_of_interest(pbs_files, chunksize=10, n_jobs=1):
