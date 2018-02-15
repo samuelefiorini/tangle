@@ -171,7 +171,7 @@ def main():
     pbs_files_fullpath = [os.path.join(args.root, '{}'.format(pbs)) for pbs in pbs_files]
     dfy = find_population_of_interest(pbs_files_fullpath, chunksize=5000, n_jobs=16)
 
-    with open('../tmp/.pkl', 'wb') as f:
+    with open('tmp/.pkl', 'wb') as f:
         pkl.dump(dfy, f)
 
 

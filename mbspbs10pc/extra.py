@@ -27,7 +27,7 @@ def timed(function):
     def timed_function(*args, **kwargs):
         t0 = time.time()
         result = function(*args, **kwargs)
-        print("\[{}] - Elapsed time : {} s\n"
+        print("[{}] - Elapsed time : {} s\n"
               .format(function.__name__, sec_to_time(time.time() - t0)))
         return result
     return timed_function
