@@ -19,6 +19,7 @@ import pandas as pd
 
 from multiprocessing import Manager
 from mbspbs10pc.utils import check_input
+from mbspbs10pc.extra import timed
 
 
 def parse_arguments():
@@ -59,6 +60,7 @@ def process_chunk(i, chunk, results, dd):
         results[i] = ptnt_id.values
 
 
+@timed
 def find_diabetes_drugs_users(filename, dd, chunksize=10, n_jobs=1):
     """Find the diabetes drugs user from a PBS file.
 
