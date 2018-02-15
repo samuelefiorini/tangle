@@ -13,25 +13,32 @@ def check_input(root):
     """Check the input dataset."""
     yrange = range(2008, 2015)
     mbs_files = ['MBS_SAMPLE_10PCT_'+str(year)+'.csv' for year in yrange]
+    mbs_files = [os.path.join(root, mbs) for mbs in mbs_files]
     pbs_files = ['PBS_SAMPLE_10PCT_'+str(year)+'.csv' for year in yrange]
-    sample_pin_lookout = 'SAMPLE_PIN_LOOKUP.csv'
+    pbs_files = [os.path.join(root, pbs) for pbs in pbs_files]
+    sample_pin_lookout = os.path.join(root, 'SAMPLE_PIN_LOOKUP.csv')
 
-    print('Checking input...')
-    # Check for the SAMPLE_PIN_LOOKUP.csv file (not mandatory)
-    if not os.path.exists(os.path.join(root, sample_pin_lookout)):
-        warnings.warn('File {} not found in folder {}'.format(sample_pin_lookout, root))
+    mbs_files_set = set(mbs_files)
+    pbs_files_set = set(pbs_files)
 
     # Check for the MBS files
     for mbs in mbs_files:
-        if not os.path.exists(os.path.join(root, mbs)):
-            raise IOError('File {} not found in folder {}'.format(mbs, root))
+        if not os.path.exists(mbs):
+            warnings.warn('File {} not found'.format(mbs))
+            mbs_files_set.remove(mbs)
 
     # Check for the PBS files
     for pbs in pbs_files:
-        if not os.path.exists(os.path.join(root, pbs)):
-            raise IOError('File {} not found in folder {}'.format(pbs, root))
-    print('ok.')
+        if not os.path.exists(pbs):
+            warnings.warn('File {} not found'.format(pbs))
+            pbs_files_set.remove(pbs)
 
+    print('Found:\n- {} MBS files\n- {} PBS files'.format(len(mbs_files_set), len(pbs_files_set)))
+
+    # Check for the SAMPLE_PIN_LOOKUP.csv file (not mandatory)
+    if not os.path.exists(sample_pin_lookout):
+        warnings.warn('File {} not found'.format(sample_pin_lookout))
+    
 
 
 def show_most_frequent(x, top_k=25, dpi=100, column=None, **kwargs):

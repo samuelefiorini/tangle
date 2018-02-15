@@ -8,11 +8,13 @@ glycaemia-control drugs (see ../data/drugs_used_in_diabetes.csv).
 These individuals will be labeled as our positive class (y = 1).
 
 STEPS:
-1.
+1. For each year filter the PTNT_ID that were prescribed of a drug listed in `data/drugs_used_in_diabetes.csv`
 """
 
 import argparse
 import os
+
+import pandas as pd
 
 from mbspbs10pc.utils import check_input
 
@@ -32,21 +34,42 @@ def parse_arguments():
     return args
 
 
-def main():
-    """Main make_xy.py routine."""
+def init_main():
+    """Initialize the main routine."""
     args = parse_arguments()
 
     # Check input dataset
     if args.root is None:
-        ROOT = os.path.join('..', '..', 'data')
-    else:
-        ROOT = args.root
-    if not args.skip_input_check: check_input(ROOT)
+        args.root = os.path.join('..', '..', 'data')
+    if not args.skip_input_check: check_input(args.root)
 
     # Check starting year
     start_year = args.from_year
     if start_year not in range(2008, 2015):
         raise ValueError("Diabetes drug starting year must be in [2008-2014]")
+    return args
+
+
+def main():
+    """Main make_xy.py routine."""
+    args = init_main()
+
+    # MBS-PBS 10% dataset files
+    mbs_files = filter(lambda x: x.startswith('MBS'), os.listdir(args.root))
+    pbs_files = filter(lambda x: x.startswith('PBS'), os.listdir(args.root))
+    sample_pin_lookout = filter(lambda x: x.startswith('SAMPLE'), os.listdir(args.root))[0]
+
+    # Load the drugs used in diabetes list file
+    dd = pd.read_csv(os.path.join('data', 'drugs_used_in_diabetes.csv'), header=0)
+
+    # Fix 6-digit notation
+    dd_set = set()
+    for item in dd.values.ravel():
+        if len(item) < 6:
+            dd_set.add(str(0)+item)
+        else:
+            dd_set.add(item)
+
 
 ################################################################################
 
