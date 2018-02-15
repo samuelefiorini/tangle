@@ -159,7 +159,7 @@ def find_population_of_interest(pbs_files, chunksize=10, n_jobs=1):
     return index
 
 
-def filter_population_of_interest(dfy, target_year=2012):
+def filter_population_of_interest(df, target_year=2012):
     """Filter the population of interest according to the input target year.
 
     This function returns the `'PTNT_ID'` of the subjects that started taking
@@ -167,7 +167,7 @@ def filter_population_of_interest(dfy, target_year=2012):
 
     Parameters:
     --------------
-    dfy: dictionary
+    df: dictionary
         The output of find_population_of_interest()
 
     target_year: integer (default=2012)
@@ -180,12 +180,13 @@ def filter_population_of_interest(dfy, target_year=2012):
     """
     # Init the postive subjects with the full list of people taking
     # diabetes drugs in the target year
-    positive_subjects = set(dfy['../../data/PBS_SAMPLE_10PCT_'+str(target_year)+'.csv'])
+    positive_subjects = set(df['PBS_SAMPLE_10PCT_'+str(target_year)+'.csv'])
 
     for year in np.arange(2008, target_year)[::-1]:
-        print(len(positive_subjects))
-        curr = set(dfy['../../data/PBS_SAMPLE_10PCT_'+str(year)+'.csv'])
+        curr = set(df['PBS_SAMPLE_10PCT_'+str(year)+'.csv'])
         positive_subjects = set(filter(lambda x: x not in curr, positive_subjects))
+
+    return list(positive_subjects)
 
 
 def main():
@@ -199,14 +200,22 @@ def main():
 
     # Filter the population of people using drugs for diabetes
     pbs_files_fullpath = [os.path.join(args.root, '{}'.format(pbs)) for pbs in pbs_files]
-    dfy = find_population_of_interest(pbs_files_fullpath, chunksize=5000, n_jobs=16)
+    # df = find_population_of_interest(pbs_files_fullpath, chunksize=5000, n_jobs=16)
+    
+    # with open('tmp/df.pkl', 'wb') as f:  # FIXME
+    #     pkl.dump(df, f)
 
-    with open('tmp/dfy.pkl', 'wb') as f:
-        pkl.dump(dfy, f)
+    with open('tmp/df.pkl', 'rb') as f:  # FIXME
+        df = pkl.load(f)
 
     # Find, for each year, the number of people that STARTED taking
     # drugs for diabetes; i.e.: people that are prescribed to diabetes drugs in
     # the current year and that were never prescribed before
+    pos_subj_ids = filter_population_of_interest(df, target_year=args.target_year)
+    print(len(pos_subj_ids))
+
+    # FIXME
+    pd.DataFrame(data=pos_subj_ids, columns=['PTNT_ID']).to_csv('tmp/pos_subj_ids.csv', index=False)
 
 
 
