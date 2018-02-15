@@ -54,8 +54,8 @@ def init_main():
 
 def process_chunk(i, chunk, results, dd):
     """Process chunk of data frame."""
-    ptnt_id = chunk.loc[chunk['ITM_CD'].isin(dd_set)]['PTNT_ID']
-    if len(idx) > 0:  # save only the relevant results
+    ptnt_id = chunk.loc[chunk['ITM_CD'].isin(dd)]['PTNT_ID']
+    if len(ptnt_id) > 0:  # save only the relevant results
         results[i] = ptnt_id.values
 
 
@@ -149,8 +149,10 @@ def find_population_of_interest(pbs_files, chunksize=10, n_jobs=1):
     pbs_years = [s.split('_')[-1].split('.')[0] for s in pbs_files]
     index = {k: None for k in pbs_years}  # init the index dictionary
     for pbs in pbs_files:
-        index[pbs] = find_diabetes_drugs_users(pbs, chunksize=chunksize,
-                                                n_jobs=n_jobs)
+        print('Reading {} ...'.format(pbs))
+        index[pbs] = find_diabetes_drugs_users(pbs, dd, chunksize=chunksize,
+                                               n_jobs=n_jobs)
+        print('done.')
     return index
 
 
@@ -165,7 +167,7 @@ def main():
 
     # Assign the labels
     pbs_files_fullpath = [os.path.join(args.root, '{}'.format(pbs)) for pbs in pbs_files]
-    dfy = find_population_of_interest(pbs_files_fullpath)
+    dfy = find_population_of_interest(pbs_files_fullpath, chunksize=5000, n_jobs=16)
 
     with open('../tmp/.pkl', 'wb') as f:
         pkl.dump(dfy, f)
