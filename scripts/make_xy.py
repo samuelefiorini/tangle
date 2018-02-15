@@ -14,6 +14,7 @@ STEPS:
 import argparse
 import cPickle as pkl
 import multiprocessing as mp
+import numpy as np
 import os
 import pandas as pd
 
@@ -26,13 +27,13 @@ def parse_arguments():
     """"Parse input arguments."""
     parser = argparse.ArgumentParser(description='MBS-PBS 10% data/labels '
                                                  'extraction.')
-    parser.add_argument('-f', '--from_year', type=int,
+    parser.add_argument('-t', '--target_year', type=int,
                         help='Diabetes drug starting year.', default=2012)
     parser.add_argument('-r', '--root', type=str,
                         help='Dataset root folder (default=../../data).',
                         default=None)
     parser.add_argument('-s', '--skip_input_check', action='store_false',
-                        help='Skipt the input check (default=True).')
+                        help='Skip the input check (default=True).')
     args = parser.parse_args()
     return args
 
@@ -46,9 +47,8 @@ def init_main():
         args.root = os.path.join('..', '..', 'data')
     if not args.skip_input_check: check_input(args.root)
 
-    # Check starting year
-    start_year = args.from_year
-    if start_year not in range(2008, 2015):
+    # Check target year
+    if args.target_year not in range(2008, 2015):
         raise ValueError("Diabetes drug starting year must be in [2008-2014]")
     return args
 
@@ -151,11 +151,41 @@ def find_population_of_interest(pbs_files, chunksize=10, n_jobs=1):
     # were prescribed to diabes drugs
     index = dict()
     for pbs in pbs_files:
-        print('Reading {} ...'.format(pbs))
-        index[pbs] = find_diabetes_drugs_users(pbs, dd, chunksize=chunksize,
-                                               n_jobs=n_jobs)
+        _pbs = os.path.split(pbs)[-1]  # more visually appealing
+        print('Reading {} ...'.format(_pbs))
+        index[_pbs] = find_diabetes_drugs_users(pbs, dd, chunksize=chunksize,
+                                                n_jobs=n_jobs)
         print('done.')
     return index
+
+
+def filter_population_of_interest(dfy, target_year=2012):
+    """Filter the population of interest according to the input target year.
+
+    This function returns the `'PTNT_ID'` of the subjects that started taking
+    diabetes drugs in the target year.
+
+    Parameters:
+    --------------
+    dfy: dictionary
+        The output of find_population_of_interest()
+
+    target_year: integer (default=2012)
+        The target year
+
+    Returns:
+    --------------
+    ptnt_id: list
+        The list of target patient IDs.
+    """
+    # Init the postive subjects with the full list of people taking
+    # diabetes drugs in the target year
+    positive_subjects = set(dfy['../../data/PBS_SAMPLE_10PCT_'+str(target_year)+'.csv'])
+
+    for year in np.arange(2008, target_year)[::-1]:
+        print(len(positive_subjects))
+        curr = set(dfy['../../data/PBS_SAMPLE_10PCT_'+str(year)+'.csv'])
+        positive_subjects = set(filter(lambda x: x not in curr, positive_subjects))
 
 
 def main():
@@ -167,12 +197,19 @@ def main():
     pbs_files = filter(lambda x: x.startswith('PBS'), os.listdir(args.root))
     #sample_pin_lookout = filter(lambda x: x.startswith('SAMPLE'), os.listdir(args.root))[0]
 
-    # Assign the labels
+    # Filter the population of people using drugs for diabetes
     pbs_files_fullpath = [os.path.join(args.root, '{}'.format(pbs)) for pbs in pbs_files]
     dfy = find_population_of_interest(pbs_files_fullpath, chunksize=5000, n_jobs=16)
 
     with open('tmp/dfy.pkl', 'wb') as f:
         pkl.dump(dfy, f)
+
+    # Find, for each year, the number of people that STARTED taking
+    # drugs for diabetes; i.e.: people that are prescribed to diabetes drugs in
+    # the current year and that were never prescribed before
+
+
+
 
 
 ################################################################################
