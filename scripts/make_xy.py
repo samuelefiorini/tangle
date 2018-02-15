@@ -148,8 +148,7 @@ def find_population_of_interest(pbs_files, chunksize=10, n_jobs=1):
 
     # Itereate on the pbs files and get the index of the individuals that
     # were prescribed to diabes drugs
-    pbs_years = [s.split('_')[-1].split('.')[0] for s in pbs_files]
-    index = {k: None for k in pbs_years}  # init the index dictionary
+    index = dict()
     for pbs in pbs_files:
         print('Reading {} ...'.format(pbs))
         index[pbs] = find_diabetes_drugs_users(pbs, dd, chunksize=chunksize,
@@ -171,7 +170,7 @@ def main():
     pbs_files_fullpath = [os.path.join(args.root, '{}'.format(pbs)) for pbs in pbs_files]
     dfy = find_population_of_interest(pbs_files_fullpath, chunksize=5000, n_jobs=16)
 
-    with open('tmp/.pkl', 'wb') as f:
+    with open('tmp/dfy.pkl', 'wb') as f:
         pkl.dump(dfy, f)
 
 
