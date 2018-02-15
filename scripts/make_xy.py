@@ -107,7 +107,7 @@ def find_diabetes_drugs_users(filename, dd, chunksize=10, n_jobs=1):
     # Collapse the results in a single DataFrame
     index = set()
     for k in results.keys():
-        index.add(k)
+        index.add(results[k])
 
     return index
 
