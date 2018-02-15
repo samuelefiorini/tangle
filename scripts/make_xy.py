@@ -60,15 +60,15 @@ def main():
     sample_pin_lookout = filter(lambda x: x.startswith('SAMPLE'), os.listdir(args.root))[0]
 
     # Load the drugs used in diabetes list file
-    dd = pd.read_csv(os.path.join('data', 'drugs_used_in_diabetes.csv'), header=0)
+    _dd = pd.read_csv(os.path.join('data', 'drugs_used_in_diabetes.csv'), header=0)
 
     # Fix 6-digit notation
-    dd_set = set()
-    for item in dd.values.ravel():
+    dd = set()  # dd should be a set for performance reasons
+    for item in _dd.values.ravel():
         if len(item) < 6:
-            dd_set.add(str(0)+item)
+            dd.add(str(0)+item)
         else:
-            dd_set.add(item)
+            dd.add(item)
 
 
 ################################################################################
