@@ -38,7 +38,7 @@ def check_input(root):
     # Check for the SAMPLE_PIN_LOOKUP.csv file (not mandatory)
     if not os.path.exists(sample_pin_lookout):
         warnings.warn('File {} not found'.format(sample_pin_lookout))
-    
+
 
 
 def show_most_frequent(x, top_k=25, dpi=100, column=None, **kwargs):
