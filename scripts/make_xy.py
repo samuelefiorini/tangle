@@ -149,8 +149,7 @@ def find_population_of_interest(pbs_files, chunksize=10, n_jobs=1):
     pbs_years = [s.split('_')[-1].split('.')[0] for s in pbs_files]
     index = {k: None for k in pbs_years}  # init the index dictionary
     for pbs in pbs_files:
-        filename = os.path.join(args.root, '{}'.format(pbs))
-        index[pbs] = find_diabetes_drugs_users(filename, chunksize=chunksize,
+        index[pbs] = find_diabetes_drugs_users(pbs, chunksize=chunksize,
                                                 n_jobs=n_jobs)
     return index
 
@@ -165,7 +164,8 @@ def main():
     #sample_pin_lookout = filter(lambda x: x.startswith('SAMPLE'), os.listdir(args.root))[0]
 
     # Assign the labels
-    dfy = find_population_of_interest(pbs_files)
+    pbs_files_fullpath = [os.path.join(args.root, '{}'.format(pbs)) for pbs in pbs_files]
+    dfy = find_population_of_interest(pbs_files_fullpath)
 
     with open('../tmp/.pkl', 'wb') as f:
         pkl.dump(dfy, f)
