@@ -21,13 +21,13 @@ These individuals will be labeled as our positive class (y = 1).
 import argparse
 import cPickle as pkl
 import multiprocessing as mp
-import numpy as np
 import os
-import pandas as pd
-
 from multiprocessing import Manager
-from mbspbs10pc.utils import check_input
+
+import numpy as np
+import pandas as pd
 from mbspbs10pc.extra import timed
+from mbspbs10pc.utils import check_input
 
 
 def parse_arguments():
@@ -115,7 +115,6 @@ def find_diabetes_drugs_users(filename, dd, co_payment=None, chunksize=10, n_job
     reader = pd.read_csv(filename, chunksize=chunksize,
                          usecols=['ITM_CD', 'PTNT_ID',
                                   'PTNT_CNTRBTN_AMT', 'BNFT_AMT'])
-
     # Submit async jobs
     jobs = []
     for i, chunk in enumerate(reader):
