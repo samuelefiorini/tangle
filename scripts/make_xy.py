@@ -209,10 +209,10 @@ def main():
     pbs_files_fullpath = [os.path.join(args.root, '{}'.format(pbs)) for pbs in pbs_files]
     df = find_population_of_interest(pbs_files_fullpath, chunksize=5000, n_jobs=16)
 
-    with open('tmp/df.pkl', 'wb') as f:  # FIXME
+    with open('tmp/df2.pkl', 'wb') as f:  # FIXME
          pkl.dump(df, f)
 
-    with open('tmp/df.pkl', 'rb') as f:  # FIXME
+    with open('tmp/df2.pkl', 'rb') as f:  # FIXME
         df = pkl.load(f)
 
     # Find, for each year, the number of people that STARTED taking
@@ -222,7 +222,7 @@ def main():
     print(len(pos_subj_ids))
 
     # FIXME
-    pd.DataFrame(data=pos_subj_ids, columns=['PTNT_ID']).to_csv('tmp/pos_subj_ids.csv', index=False)
+    pd.DataFrame(data=pos_subj_ids, columns=['PTNT_ID']).to_csv('tmp/pos_subj_ids2.csv', index=False)
 
 
 
