@@ -13,7 +13,8 @@ These individuals will be labeled as our positive class (y = 1).
 * In 2012 they started to record every PBS item, even the ones below the
   co-payment threshold. For consistency, it is possible to exclude from the
   counts the PBS items having PTNT_CNTRBTN_AMT < co-payment(year). Be aware that
-  the threshold varies in the years. See data/co-payments_08-18.csv.
+  the threshold varies in the years. See data/co-payments_08-18.csv. This only
+  holds for General Beneficiaries.
 """
 
 import argparse
@@ -61,15 +62,22 @@ def init_main():
     return args
 
 
-def process_chunk(i, chunk, results, dd):
-    """Process chunk of data frame."""
-    ptnt_id = chunk.loc[chunk['ITM_CD'].isin(dd)]['PTNT_ID']
+def process_chunk(i, chunk, results, dd, co_payment):
+    """Process chunk of data frame.
+
+    When co_payment is not None, PBS items costing less than co_payments are
+    filtered out.
+    """
+    if co_payment is None:
+        ptnt_id = chunk.loc[chunk['ITM_CD'].isin(dd)]['PTNT_ID']
+    else:
+        ptnt_id = chunk.loc[np.logical_and(chunk['PTNT_CNTRBTN_AMT']>co_payment, chunk['ITM_CD'].isin(dd))]['PTNT_ID']
     if len(ptnt_id) > 0:  # save only the relevant results
         results[i] = ptnt_id.values
 
 
 @timed
-def find_diabetes_drugs_users(filename, dd, chunksize=10, n_jobs=1):
+def find_diabetes_drugs_users(filename, dd, co_payment=None, chunksize=10, n_jobs=1):
     """Find the diabetes drugs user from a PBS file.
 
     This function supports parallel asyncronous access to chunks of the input
@@ -82,6 +90,10 @@ def find_diabetes_drugs_users(filename, dd, chunksize=10, n_jobs=1):
 
     dd: pandas.Series
         Table of drugs used in diabetes.
+
+    co_payment: numeric (default=None)
+        The Co-payment threshold of the current year.
+        Source: [http://www.pbs.gov.au/info/healthpro/explanatory-notes/front/fee]
 
     chunksize: integer
         The number of rows the PBS file should be split into.
@@ -99,13 +111,14 @@ def find_diabetes_drugs_users(filename, dd, chunksize=10, n_jobs=1):
     results = manager.dict()
     pool = mp.Pool(n_jobs)  # Use n_jobs processes
 
-    reader = pd.read_csv(filename, chunksize=chunksize)
+    reader = pd.read_csv(filename, chunksize=chunksize,
+                         usecols=['ITM_CD', 'PTNT_ID', 'PTNT_CNTRBTN_AMT'])
 
     # Submit async jobs
     jobs = []
     for i, chunk in enumerate(reader):
         # process each data frame
-        f = pool.apply_async(process_chunk, [i, chunk, results, dd])
+        f = pool.apply_async(process_chunk, [i, chunk, results, dd, co_payment])
         jobs.append(f)
 
     # Collect jobs
@@ -121,13 +134,19 @@ def find_diabetes_drugs_users(filename, dd, chunksize=10, n_jobs=1):
     return list(index)
 
 
-def find_population_of_interest(pbs_files, chunksize=10, n_jobs=1):
+def find_population_of_interest(pbs_files, filter_copayments=True, chunksize=10, n_jobs=1):
     """Search people using diabetes drugs in input PBS files.
 
     Parameters:
     --------------
     pbs_files: list
         List of input PBS filenames.
+
+    filter_copayments: bool
+        When True, entries in the PBS data having
+        PTNT_CNTRBTN_AMT < copayment(year) will be excluded. This improves
+        consistency for entries that are issued after April 2012. This only
+        holds for General Beneficiaries.
 
     chunksize: integer
         The number of rows the PBS file should be split into.
@@ -155,22 +174,27 @@ def find_population_of_interest(pbs_files, chunksize=10, n_jobs=1):
         else:
             dd.add(item)
 
-    # # FIXME - exclude Metformins and Sulfonamides
-    # dd = pd.DataFrame(data=list(dd), columns=_dd.columns)
-    # ms = pd.read_csv(os.path.join('data', 'metformins_sulfonamides.csv'), header=0)
-    # mask = []
-    # for d in dd.values:
-    #     mask.append(d not in ms.values)
-    # dd = pd.DataFrame(data=dd.values[mask], columns=dd.columns)
-    # dd = set(list(dd.values.ravel()))
+    # Load the Co-payments thresholds
+    if filter_copayments:
+        print('[!!] Co-payment filter ON [!!]')
+        co_payments = pd.read_csv(os.path.join('data', 'co-payments_08-18.csv'),
+                                  header=0, index_col=0, usecols=['DOC', 'GBC'])
 
     # Itereate on the pbs files and get the index of the individuals that
     # were prescribed to diabes drugs
     index = dict()
     for pbs in pbs_files:
         _pbs = os.path.split(pbs)[-1]  # more visually appealing
+
+        if filter_copayments:  # Select the appropriate co-payment threshold
+            year = int(_pbs.split('_')[-1].split('.')[0])
+            co_payment = co_payments.loc[year]['GBC']
+        else:
+            co_payment = None
+
         print('Reading {} ...'.format(_pbs))
-        index[_pbs] = find_diabetes_drugs_users(pbs, dd, chunksize=chunksize,
+        index[_pbs] = find_diabetes_drugs_users(pbs, dd, co_payment,
+                                                chunksize=chunksize,
                                                 n_jobs=n_jobs)
         print('done.')
     return index
@@ -211,17 +235,18 @@ def main():
     args = init_main()
 
     # MBS-PBS 10% dataset files
-    #mbs_files = filter(lambda x: x.startswith('MBS'), os.listdir(args.root))
+    # mbs_files = filter(lambda x: x.startswith('MBS'), os.listdir(args.root))
     pbs_files = filter(lambda x: x.startswith('PBS'), os.listdir(args.root))
-    #sample_pin_lookout = filter(lambda x: x.startswith('SAMPLE'), os.listdir(args.root))[0]
+    # sample_pin_lookout = filter(lambda x: x.startswith('SAMPLE'), os.listdir(args.root))[0]
 
     # Filter the population of people using drugs for diabetes
     pbs_files_fullpath = [os.path.join(args.root, '{}'.format(pbs)) for pbs in pbs_files]
-    #df = find_population_of_interest(pbs_files_fullpath, chunksize=5000, n_jobs=16)
-    df = find_population_of_interest(pbs_files_fullpath, chunksize=3000, n_jobs=4)
+    df = find_population_of_interest(pbs_files_fullpath,
+                                     filter_copayments=args.filter_copayments,
+                                     chunksize=3000, n_jobs=4)
 
     with open('tmp/df3.pkl', 'wb') as f:  # FIXME
-         pkl.dump(df, f)
+        pkl.dump(df, f)
 
     with open('tmp/df3.pkl', 'rb') as f:  # FIXME
         df = pkl.load(f)
