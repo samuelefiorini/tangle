@@ -7,8 +7,13 @@ in time (in between 2008-2014) were prescribed to the use of some
 glycaemia-control drugs (see ../data/drugs_used_in_diabetes.csv).
 These individuals will be labeled as our positive class (y = 1).
 
-STEPS:
-1. For each year filter the PTNT_ID that were prescribed of a drug listed in `data/drugs_used_in_diabetes.csv`
+* For each year filter the PTNT_ID that were prescribed of a drug listed in
+  `data/drugs_used_in_diabetes.csv`
+
+* In 2012 they started to record every PBS item, even the ones below the
+  co-payment threshold. For consistency, it is possible to exclude from the
+  counts the PBS items having PTNT_CNTRBTN_AMT < co-payment(year). Be aware that
+  the threshold varies in the years. See data/co-payments_08-18.csv.
 """
 
 import argparse
@@ -34,6 +39,9 @@ def parse_arguments():
                         default=None)
     parser.add_argument('-s', '--skip_input_check', action='store_false',
                         help='Skip the input check (default=True).')
+    parser.add_argument('-fc', '--filter_copayments', action='store_false',
+                        help='Exclude the PBS items having '
+                        'PTNT_CNTRBTN_AMT < co-payment(year).')
     args = parser.parse_args()
     return args
 
@@ -147,12 +155,14 @@ def find_population_of_interest(pbs_files, chunksize=10, n_jobs=1):
         else:
             dd.add(item)
 
-    # FIXME - exclude Metformins and Sulfonamides
-    ms = pd.read_csv(os.path.join('data', 'metformins_sulfonamides.csv'), header=0)
-    mask = []
-    for d in dd.values:
-        mask.append(d not in ms.values)
-    dd = pd.DataFrame(data=dd.values[mask], columns=dd.columns)
+    # # FIXME - exclude Metformins and Sulfonamides
+    # dd = pd.DataFrame(data=list(dd), columns=_dd.columns)
+    # ms = pd.read_csv(os.path.join('data', 'metformins_sulfonamides.csv'), header=0)
+    # mask = []
+    # for d in dd.values:
+    #     mask.append(d not in ms.values)
+    # dd = pd.DataFrame(data=dd.values[mask], columns=dd.columns)
+    # dd = set(list(dd.values.ravel()))
 
     # Itereate on the pbs files and get the index of the individuals that
     # were prescribed to diabes drugs
@@ -207,12 +217,13 @@ def main():
 
     # Filter the population of people using drugs for diabetes
     pbs_files_fullpath = [os.path.join(args.root, '{}'.format(pbs)) for pbs in pbs_files]
-    df = find_population_of_interest(pbs_files_fullpath, chunksize=5000, n_jobs=16)
+    #df = find_population_of_interest(pbs_files_fullpath, chunksize=5000, n_jobs=16)
+    df = find_population_of_interest(pbs_files_fullpath, chunksize=3000, n_jobs=4)
 
-    with open('tmp/df2.pkl', 'wb') as f:  # FIXME
+    with open('tmp/df3.pkl', 'wb') as f:  # FIXME
          pkl.dump(df, f)
 
-    with open('tmp/df2.pkl', 'rb') as f:  # FIXME
+    with open('tmp/df3.pkl', 'rb') as f:  # FIXME
         df = pkl.load(f)
 
     # Find, for each year, the number of people that STARTED taking
@@ -222,7 +233,7 @@ def main():
     print(len(pos_subj_ids))
 
     # FIXME
-    pd.DataFrame(data=pos_subj_ids, columns=['PTNT_ID']).to_csv('tmp/pos_subj_ids2.csv', index=False)
+    pd.DataFrame(data=pos_subj_ids, columns=['PTNT_ID']).to_csv('tmp/pos_subj_ids3.csv', index=False)
 
 
 
