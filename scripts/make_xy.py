@@ -12,9 +12,10 @@ These individuals will be labeled as our positive class (y = 1).
 
 * In 2012 they started to record every PBS item, even the ones below the
   co-payment threshold. For consistency, it is possible to exclude from the
-  counts the PBS items having PTNT_CNTRBTN_AMT < co-payment(year). Be aware that
-  the threshold varies in the years. See data/co-payments_08-18.csv. This only
-  holds for General Beneficiaries.
+  counts the PBS items having total cost < co-payment(year).
+  Where total cost is 'BNFT_AMT'+'PTNT_CNTRBTN_AMT'.
+  Be aware that the threshold varies in the years.
+  See data/co-payments_08-18.csv. This only holds for General Beneficiaries.
 """
 
 import argparse
@@ -71,7 +72,7 @@ def process_chunk(i, chunk, results, dd, co_payment):
     if co_payment is None:
         ptnt_id = chunk.loc[chunk['ITM_CD'].isin(dd)]['PTNT_ID']
     else:
-        ptnt_id = chunk.loc[np.logical_and(chunk['PTNT_CNTRBTN_AMT']>co_payment, chunk['ITM_CD'].isin(dd))]['PTNT_ID']
+        ptnt_id = chunk.loc[np.logical_and(chunk['PTNT_CNTRBTN_AMT']+chunk['BNFT_AMT']>=co_payment, chunk['ITM_CD'].isin(dd))]['PTNT_ID']
     if len(ptnt_id) > 0:  # save only the relevant results
         results[i] = ptnt_id.values
 
@@ -112,7 +113,8 @@ def find_diabetes_drugs_users(filename, dd, co_payment=None, chunksize=10, n_job
     pool = mp.Pool(n_jobs)  # Use n_jobs processes
 
     reader = pd.read_csv(filename, chunksize=chunksize,
-                         usecols=['ITM_CD', 'PTNT_ID', 'PTNT_CNTRBTN_AMT'])
+                         usecols=['ITM_CD', 'PTNT_ID',
+                                  'PTNT_CNTRBTN_AMT', 'BNFT_AMT'])
 
     # Submit async jobs
     jobs = []
@@ -144,7 +146,7 @@ def find_population_of_interest(pbs_files, filter_copayments=True, chunksize=10,
 
     filter_copayments: bool
         When True, entries in the PBS data having
-        PTNT_CNTRBTN_AMT < copayment(year) will be excluded. This improves
+        total cost < copayment(year) will be excluded. This improves
         consistency for entries that are issued after April 2012. This only
         holds for General Beneficiaries.
 
