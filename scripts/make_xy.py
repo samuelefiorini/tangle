@@ -147,6 +147,13 @@ def find_population_of_interest(pbs_files, chunksize=10, n_jobs=1):
         else:
             dd.add(item)
 
+    # FIXME - exclude Metformins and Sulfonamides
+    ms = pd.read_csv(os.path.join('data', 'metformins_sulfonamides.csv'), header=0)
+    mask = []
+    for d in dd.values:
+        mask.append(d not in ms.values)
+    dd = pd.DataFrame(data=dd.values[mask], columns=dd.columns)
+
     # Itereate on the pbs files and get the index of the individuals that
     # were prescribed to diabes drugs
     index = dict()
@@ -200,10 +207,10 @@ def main():
 
     # Filter the population of people using drugs for diabetes
     pbs_files_fullpath = [os.path.join(args.root, '{}'.format(pbs)) for pbs in pbs_files]
-    # df = find_population_of_interest(pbs_files_fullpath, chunksize=5000, n_jobs=16)
-    
-    # with open('tmp/df.pkl', 'wb') as f:  # FIXME
-    #     pkl.dump(df, f)
+    df = find_population_of_interest(pbs_files_fullpath, chunksize=5000, n_jobs=16)
+
+    with open('tmp/df.pkl', 'wb') as f:  # FIXME
+         pkl.dump(df, f)
 
     with open('tmp/df.pkl', 'rb') as f:  # FIXME
         df = pkl.load(f)
