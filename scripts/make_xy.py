@@ -10,7 +10,7 @@ These individuals will be labeled as our positive class (y = 1).
 * For each year filter the PTNT_ID that were prescribed of a drug listed in
   `data/drugs_used_in_diabetes.csv`
 
-* In 2012 they started to record every PBS item, even the ones below the
+* In April 2012 they started to record every PBS item, even the ones below the
   co-payment threshold. For consistency, it is possible to exclude from the
   counts the PBS items having total cost < co-payment(year).
   Where total cost is 'BNFT_AMT'+'PTNT_CNTRBTN_AMT'.
@@ -25,7 +25,6 @@ import datetime
 import multiprocessing as mp
 from multiprocessing import Manager
 import os
-
 import numpy as np
 import pandas as pd
 from mbspbs10pc.extra import timed
@@ -41,13 +40,17 @@ def parse_arguments():
     parser.add_argument('-r', '--root', type=str,
                         help='Dataset root folder (default=../../data).',
                         default=None)
+    parser.add_argument('-o', '--output', type=str,
+                        help='Temporary file pikle output.',
+                        default=None)
     parser.add_argument('-s', '--skip_input_check', action='store_false',
-                        help='Skip the input check (default=True).')
-    parser.add_argument('-fc', '--filter_copayments', action='store_false',
-                        help='Exclude the PBS items having '
-                        'PTNT_CNTRBTN_AMT < co-payment(year).')
+                        help='Skip the input check (default=False).')
+    parser.add_argument('-fc', '--filter_copayments', action='store_true',
+                        help='Use this option to include the PBS '
+                        'items having total cost <= co-payment(year)'
+                        ' (default=True).')
     parser.add_argument('-mb', '--monthly_breakdown', action='store_true',
-                        help='Split records in different months (default=False).')
+                        help='Split records in different months (default=True).')
     args = parser.parse_args()
     return args
 
@@ -144,6 +147,7 @@ def find_diabetes_drugs_users(filename, dd, co_payment=None,
     if monthly_breakdown:
         indexes = {m: set() for m in range(1, 13)}  # each key is a month
         year = int(results[0]['SPPLY_DT'].values[0][-4:])  # retrieve the current year
+        #_full_index = set() # avoid duplicates in the same year
 
         for k in results.keys(): # collapse all the results in a single object
             content = results[k]
@@ -157,6 +161,8 @@ def find_diabetes_drugs_users(filename, dd, co_payment=None,
 
                 for item in ptnt_id_month:  # iterate over the possible PTNT_IDs
                     indexes[month].add(item)
+                    #if item not in _full_index: indexes[month].add(item) # avoid duplicates in the same year
+                    #_full_index.add(item)
 
         return {m: list(indexes[m]) for m in range(1, 13)}
 
@@ -171,6 +177,7 @@ def find_diabetes_drugs_users(filename, dd, co_payment=None,
         return list(index)
 
 
+@timed
 def find_population_of_interest(pbs_files, filter_copayments=True, monthly_breakdown=False,
                                 chunksize=10, n_jobs=1):
     """Search people using diabetes drugs in input PBS files.
@@ -215,13 +222,8 @@ def find_population_of_interest(pbs_files, filter_copayments=True, monthly_break
         else:
             dd.add(item)
 
-    # Check for monthly breakdown flag
-    if monthly_breakdown:
-        print('[!!] Monthly breakdown ON [!!]')
-
     # Load the Co-payments thresholds
     if filter_copayments:
-        print('[!!] Co-payment filter ON [!!]')
         co_payments = pd.read_csv(os.path.join('data', 'co-payments_08-18.csv'),
                                   header=0, index_col=0, usecols=['DOC', 'GBC'])
 
@@ -237,7 +239,7 @@ def find_population_of_interest(pbs_files, filter_copayments=True, monthly_break
         else:
             co_payment = None
 
-        print('Reading {} ...'.format(_pbs))
+        print('- Reading {} ...'.format(_pbs))
         index[_pbs] = find_diabetes_drugs_users(pbs, dd,
                                                 co_payment=co_payment,
                                                 monthly_breakdown=monthly_breakdown,
@@ -247,6 +249,7 @@ def find_population_of_interest(pbs_files, filter_copayments=True, monthly_break
     return index
 
 
+@timed
 def filter_population_of_interest(df, target_year=2012):
     """Filter the population of interest according to the input target year.
 
@@ -280,6 +283,13 @@ def filter_population_of_interest(df, target_year=2012):
 def main():
     """Main make_xy.py routine."""
     args = init_main()
+    print('------------------------------------------')
+    print('MBS - PBS 10% dataset utility: make_xy.py')
+    print('------------------------------------------')
+
+    print('[{}] Co-payment filter: {}'.format(*('+', 'ON') if args.filter_copayments else (' ', 'OFF')))
+    print('[{}] Monthly breakdown: {}'.format(*('+', 'ON') if args.monthly_breakdown else (' ', 'OFF')))
+    print('------------------------------------------')
 
     # MBS-PBS 10% dataset files
     # mbs_files = filter(lambda x: x.startswith('MBS'), os.listdir(args.root))
@@ -293,11 +303,19 @@ def main():
                                      monthly_breakdown=args.monthly_breakdown,
                                      chunksize=10000, n_jobs=32)
 
-    with open('tmp/df1.pkl', 'wb') as f:  # FIXME
-        pkl.dump(df, f)
+    # Dump results
+    if args.output is None:
+        filename = 'DumpFile'+str(datetime.now())+'.pkl'
+    else:
+        filename = args.output if args.output.endswith('.pkl') else args.output+'.pkl'
 
-    with open('tmp/df1.pkl', 'rb') as f:  # FIXME
-        df = pkl.load(f)
+    print('- Saving {} ...'.format(filename))
+    with open(filename, 'wb') as f:  # FIXME
+        pkl.dump(df, f)
+    print('done.')
+
+    #with open('tmp/df3.pkl', 'rb') as f:  # FIXME
+    #    df = pkl.load(f)
 
     # Find, for each year, the number of people that STARTED taking
     # drugs for diabetes; i.e.: people that are prescribed to diabetes drugs in
