@@ -314,17 +314,24 @@ def main():
         pkl.dump(df, f)
     print('done.')
 
-    #with open('tmp/df3.pkl', 'rb') as f:  # FIXME
-    #    df = pkl.load(f)
+    print('- Loading {} ...'.format(filename))
+    with open(filename, 'rb') as f:  # FIXME
+        df = pkl.load(f)
+    print('done.')
 
     # Find, for each year, the number of people that STARTED taking
     # drugs for diabetes; i.e.: people that are prescribed to diabetes drugs in
     # the current year and that were never prescribed before
-    #pos_subj_ids = filter_population_of_interest(df, target_year=args.target_year)
-    #print(len(pos_subj_ids))
+    if args.monthly_breakdown:
+        pos_subj_ids = filter_population_of_interest(df)
+    else:
+        pos_subj_ids = filter_population_of_interest(df, target_year=args.target_year)
 
     # FIXME
-    #pd.DataFrame(data=pos_subj_ids, columns=['PTNT_ID']).to_csv('tmp/pos_subj_ids.csv', index=False)
+    filename = filename[:-4]+'.csv'
+    print('- Saving {} ...'.format(filename))
+    pd.DataFrame(data=pos_subj_ids, columns=['PTNT_ID']).to_csv(filename, index=False)
+    print('done.')
 
 
 
