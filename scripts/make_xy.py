@@ -19,12 +19,13 @@ These individuals will be labeled as our positive class (y = 1).
 """
 
 import argparse
-import cPickle as pkl
 import calendar
+import cPickle as pkl
 import datetime
 import multiprocessing as mp
-from multiprocessing import Manager
 import os
+from multiprocessing import Manager
+
 import numpy as np
 import pandas as pd
 from mbspbs10pc.extra import timed
@@ -35,11 +36,11 @@ def parse_arguments():
     """"Parse input arguments."""
     parser = argparse.ArgumentParser(description='MBS-PBS 10% data/labels '
                                                  'extraction.')
-    parser.add_argument('-t', '--target_year', type=int,
-                        help='Diabetes drug starting year.', default=2012)
     parser.add_argument('-r', '--root', type=str,
                         help='Dataset root folder (default=../../data).',
                         default=None)
+    parser.add_argument('-t', '--target_year', type=int,
+                        help='Diabetes drug starting year.', default=2012)
     parser.add_argument('-o', '--output', type=str,
                         help='Temporary file pikle output.',
                         default=None)
@@ -65,7 +66,7 @@ def init_main():
     if not args.skip_input_check: check_input(args.root)
 
     # Check target year
-    if args.target_year not in range(2008, 2015):
+    if args.target_year not in list(range(2008, 2015)):
         raise ValueError("Diabetes drug starting year must be in [2008-2014]")
     return args
 
@@ -336,6 +337,8 @@ def main():
     print('MBS - PBS 10% dataset utility: make_xy.py')
     print('------------------------------------------')
 
+    print('* Root data folder: {}'.format(args.root))
+    print('* Target year: {}\n'.format(args.target_year))
     print('[{}] Co-payment filter: {}'.format(*('+', 'ON') if args.filter_copayments else (' ', 'OFF')))
     print('[{}] Monthly breakdown: {}'.format(*('+', 'ON') if args.monthly_breakdown else (' ', 'OFF')))
     print('------------------------------------------')
@@ -391,7 +394,7 @@ def main():
     pd.DataFrame(data=neg_id, columns=['PTNT_ID']).to_csv(filename_0, index=False)
     print('done.')
 
-    # Sanity check: no samples in common between positive and negative class
+    # Sanity check: no samples should be in common between positive and negative class
     assert(len(set(pos_id).intersection(set(neg_id))) == 0)
 
 

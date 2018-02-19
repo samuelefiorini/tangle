@@ -1,9 +1,11 @@
 """Utility functions to load/visualize MBS-PBS 10% dataset."""
 
 from __future__ import division
+
 import os
-from collections import Counter
 import warnings
+from collections import Counter
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
