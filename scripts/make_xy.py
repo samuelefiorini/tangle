@@ -249,8 +249,7 @@ def find_population_of_interest(pbs_files, filter_copayments=True, monthly_break
     return index
 
 
-@timed
-def filter_population_of_interest(dd, target_year=2012):
+def find_positive_samples(dd, target_year=2012):
     """Filter the population of interest according to the input target year.
 
     This function returns the `'PTNT_ID'` of the subjects that started taking
@@ -266,24 +265,68 @@ def filter_population_of_interest(dd, target_year=2012):
 
     Returns:
     --------------
-    ptnt_id: list
-        The list of target patient IDs.
+    positive_subjects: list
+        The list of target patient IDs (positive class).
     """
     if isinstance(dd[dd.keys()[0]], dict):
-        # Monthly analysis
-        raise NotImplementedError('Monthly breakdown not implemented yet.')
+        # -- Month-by-month analysis -- #
+        raise NotImplementedError('Monthly breakdown not yet implemented.')
     else:
-        # Yearly analysis
+        # -- Year-by-year analysis -- #
         # Init the postive subjects with the full list of people taking
         # diabetes drugs in the target year
         positive_subjects = set(dd['PBS_SAMPLE_10PCT_'+str(target_year)+'.csv'])
-        negative_subjects = []
 
         for year in np.arange(2008, target_year)[::-1]:
             curr = set(dd['PBS_SAMPLE_10PCT_'+str(year)+'.csv'])
             positive_subjects = set(filter(lambda x: x not in curr, positive_subjects))
 
-        return list(positive_subjects), list(negative_subjects)
+        return list(positive_subjects)
+
+@timed
+def find_negative_samples(pbs_files, dd):
+    """Find the negative samples PTNT_ID.
+
+    Negative samples are subjects that were NEVER prescribed to diabetes
+    controlling drugs.
+
+    Parameters:
+    --------------
+    pbs_files: list
+        List of input PBS filenames.
+
+    dd: dictionary
+        The output of find_population_of_interest().
+
+    Returns:
+    --------------
+    negative_subjects: list
+        The list of non target patient IDs (negative class).
+    """
+    if isinstance(dd[dd.keys()[0]], dict):
+        # -- Month-by-month analysis -- #
+        raise NotImplementedError('Monthly breakdown not yet implemented.')
+    else:
+        # -- Year-by-year analysis -- #
+        # Start with an empty set, the iterate on each year and iteratively add
+        # to the negative subjects list, the patient id that are not selected
+        # as diabetic at the previous step.
+        negative_subjects = set()
+
+        diabetic_overall = set()
+        for year in np.arange(2008, 2014): # FIXME as soon as you get all PBS files
+            diabetic_overall |= set(dd['PBS_SAMPLE_10PCT_'+str(year)+'.csv'])
+
+        for pbs in pbs_files: # TODO maybe use multiprocessing here
+            _pbs = os.path.split(pbs)[-1]  # more visually appealing
+
+            print('- Reading {} ...'.format(_pbs))
+            curr = set(pd.read_csv(pbs, header=0, usecols=['PTNT_ID']).values.ravel())
+            # iteratively increase the set of indexes
+            negative_subjects |= set(filter(lambda x: x not in diabetic_overall, curr))
+            print('done.')
+
+        return list(negative_subjects)
 
 
 def main():
@@ -310,7 +353,8 @@ def main():
     #                                  monthly_breakdown=args.monthly_breakdown,
     #                                  chunksize=10000, n_jobs=32)
     #
-    # # Dump results
+
+    # Dump results
     if args.output is None:
         filename = 'DumpFile'+str(datetime.now())+'.pkl'
     else:
@@ -329,19 +373,26 @@ def main():
     # Find, for each year, the number of people that STARTED taking
     # drugs for diabetes; i.e.: people that are prescribed to diabetes drugs in
     # the current year and that were never prescribed before
-    pos_id, neg_id = filter_population_of_interest(dd, target_year=args.target_year)
+    pos_id = find_positive_samples(dd, target_year=args.target_year)
+    print('- {} positive samples'.format(len(pos_id)))
 
     # FIXME
-    filename = filename[:-4]+'_class_1.csv'
-    print('- Saving {} ...'.format(filename))
-    pd.DataFrame(data=pos_id, columns=['PTNT_ID']).to_csv(filename, index=False)
+    filename_1 = filename[:-4]+'_class_1.csv'
+    print('- Saving {} ...'.format(filename_1))
+    pd.DataFrame(data=pos_id, columns=['PTNT_ID']).to_csv(filename_1, index=False)
     print('done.')
 
-    filename = filename[:-4]+'_class_0.csv'
-    print('- Saving {} ...'.format(filename))
-    pd.DataFrame(data=neg_id, columns=['PTNT_ID']).to_csv(filename, index=False)
+    # Find people that were NEVER prescribed with diabetes control drugs
+    neg_id = find_negative_samples(pbs_files_fullpath, dd)
+    print('- {} negative samples'.format(len(neg_id)))
+
+    filename_0 = filename[:-4]+'_class_0.csv'
+    print('- Saving {} ...'.format(filename_0))
+    pd.DataFrame(data=neg_id, columns=['PTNT_ID']).to_csv(filename_0, index=False)
     print('done.')
 
+    # Sanity check: no samples in common between positive and negative class
+    assert(len(set(pos_id).intersection(set(neg_id))) == 0)
 
 
 
