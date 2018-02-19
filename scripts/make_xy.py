@@ -250,7 +250,7 @@ def find_population_of_interest(pbs_files, filter_copayments=True, monthly_break
 
 
 @timed
-def filter_population_of_interest(df, target_year=2012):
+def filter_population_of_interest(dd, target_year=2012):
     """Filter the population of interest according to the input target year.
 
     This function returns the `'PTNT_ID'` of the subjects that started taking
@@ -258,7 +258,7 @@ def filter_population_of_interest(df, target_year=2012):
 
     Parameters:
     --------------
-    df: dictionary
+    dd: dictionary
         The output of find_population_of_interest().
 
     target_year: integer (default=2012)
@@ -269,15 +269,21 @@ def filter_population_of_interest(df, target_year=2012):
     ptnt_id: list
         The list of target patient IDs.
     """
-    # Init the postive subjects with the full list of people taking
-    # diabetes drugs in the target year
-    positive_subjects = set(df['PBS_SAMPLE_10PCT_'+str(target_year)+'.csv'])
+    if isinstance(dd[dd.keys()[0]], dict):
+        # Monthly analysis
+        raise NotImplementedError('Monthly breakdown not implemented yet.')
+    else:
+        # Yearly analysis
+        # Init the postive subjects with the full list of people taking
+        # diabetes drugs in the target year
+        positive_subjects = set(dd['PBS_SAMPLE_10PCT_'+str(target_year)+'.csv'])
+        negative_subjects = []
 
-    for year in np.arange(2008, target_year)[::-1]:
-        curr = set(df['PBS_SAMPLE_10PCT_'+str(year)+'.csv'])
-        positive_subjects = set(filter(lambda x: x not in curr, positive_subjects))
+        for year in np.arange(2008, target_year)[::-1]:
+            curr = set(dd['PBS_SAMPLE_10PCT_'+str(year)+'.csv'])
+            positive_subjects = set(filter(lambda x: x not in curr, positive_subjects))
 
-    return list(positive_subjects)
+        return list(positive_subjects), list(negative_subjects)
 
 
 def main():
@@ -298,39 +304,42 @@ def main():
 
     # Filter the population of people using drugs for diabetes
     pbs_files_fullpath = [os.path.join(args.root, '{}'.format(pbs)) for pbs in pbs_files]
-    df = find_population_of_interest(pbs_files_fullpath,
-                                     filter_copayments=args.filter_copayments,
-                                     monthly_breakdown=args.monthly_breakdown,
-                                     chunksize=10000, n_jobs=32)
 
-    # Dump results
+    # dd = find_population_of_interest(pbs_files_fullpath,
+    #                                  filter_copayments=args.filter_copayments,
+    #                                  monthly_breakdown=args.monthly_breakdown,
+    #                                  chunksize=10000, n_jobs=32)
+    #
+    # # Dump results
     if args.output is None:
         filename = 'DumpFile'+str(datetime.now())+'.pkl'
     else:
         filename = args.output if args.output.endswith('.pkl') else args.output+'.pkl'
 
-    print('- Saving {} ...'.format(filename))
-    with open(filename, 'wb') as f:  # FIXME
-        pkl.dump(df, f)
-    print('done.')
+    # print('- Saving {} ...'.format(filename))
+    # with open(filename, 'wb') as f:  # FIXME
+    #     pkl.dump(dd, f)
+    # print('done.')
 
     print('- Loading {} ...'.format(filename))
     with open(filename, 'rb') as f:  # FIXME
-        df = pkl.load(f)
+        dd = pkl.load(f)
     print('done.')
 
     # Find, for each year, the number of people that STARTED taking
     # drugs for diabetes; i.e.: people that are prescribed to diabetes drugs in
     # the current year and that were never prescribed before
-    if args.monthly_breakdown:
-        pos_subj_ids = filter_population_of_interest(df)
-    else:
-        pos_subj_ids = filter_population_of_interest(df, target_year=args.target_year)
+    pos_id, neg_id = filter_population_of_interest(dd, target_year=args.target_year)
 
     # FIXME
-    filename = filename[:-4]+'.csv'
+    filename = filename[:-4]+'_class_1.csv'
     print('- Saving {} ...'.format(filename))
-    pd.DataFrame(data=pos_subj_ids, columns=['PTNT_ID']).to_csv(filename, index=False)
+    pd.DataFrame(data=pos_id, columns=['PTNT_ID']).to_csv(filename, index=False)
+    print('done.')
+
+    filename = filename[:-4]+'_class_0.csv'
+    print('- Saving {} ...'.format(filename))
+    pd.DataFrame(data=neg_id, columns=['PTNT_ID']).to_csv(filename, index=False)
     print('done.')
 
 
