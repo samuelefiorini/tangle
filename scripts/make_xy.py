@@ -44,6 +44,8 @@ def parse_arguments():
     parser.add_argument('-fc', '--filter_copayments', action='store_false',
                         help='Exclude the PBS items having '
                         'PTNT_CNTRBTN_AMT < co-payment(year).')
+    parser.add_argument('-mb', '--monthly_breakdown', action='store_true',
+                        help='Split records in different months (default=False).')
     args = parser.parse_args()
     return args
 
@@ -70,15 +72,20 @@ def process_chunk(i, chunk, results, dd, co_payment):
     filtered out.
     """
     if co_payment is None:
-        ptnt_id = chunk.loc[chunk['ITM_CD'].isin(dd)]['PTNT_ID']
+        idx = chunk['ITM_CD'].isin(dd)
     else:
-        ptnt_id = chunk.loc[np.logical_and(chunk['PTNT_CNTRBTN_AMT']+chunk['BNFT_AMT']>=co_payment, chunk['ITM_CD'].isin(dd))]['PTNT_ID']
-    if len(ptnt_id) > 0:  # save only the relevant results
-        results[i] = ptnt_id.values
+        idx = np.logical_and(chunk['PTNT_CNTRBTN_AMT']+chunk['BNFT_AMT']>=co_payment,
+                             chunk['ITM_CD'].isin(dd))
+
+    content = chunk.loc[idx][['PTNT_ID', 'SPPLY_DT']]
+
+    if content.shape[0] > 0:  # save only the relevant content
+        results[i] = content  # contenta has 'PTNT_ID' and 'SPPLY_DT'
 
 
 @timed
-def find_diabetes_drugs_users(filename, dd, co_payment=None, chunksize=10, n_jobs=1):
+def find_diabetes_drugs_users(filename, dd, co_payment=None,
+                              monthly_breakdown=False, chunksize=10, n_jobs=1):
     """Find the diabetes drugs user from a PBS file.
 
     This function supports parallel asyncronous access to chunks of the input
@@ -95,6 +102,9 @@ def find_diabetes_drugs_users(filename, dd, co_payment=None, chunksize=10, n_job
     co_payment: numeric (default=None)
         The Co-payment threshold of the current year.
         Source: [http://www.pbs.gov.au/info/healthpro/explanatory-notes/front/fee]
+
+    monthly_breakdown: bool (default=False)
+        When True, split the records in different months for each year.
 
     chunksize: integer
         The number of rows the PBS file should be split into.
@@ -113,7 +123,7 @@ def find_diabetes_drugs_users(filename, dd, co_payment=None, chunksize=10, n_job
     pool = mp.Pool(n_jobs)  # Use n_jobs processes
 
     reader = pd.read_csv(filename, chunksize=chunksize,
-                         usecols=['ITM_CD', 'PTNT_ID',
+                         usecols=['ITM_CD', 'PTNT_ID', 'SPPLY_DT',
                                   'PTNT_CNTRBTN_AMT', 'BNFT_AMT'])
     # Submit async jobs
     jobs = []
@@ -126,16 +136,22 @@ def find_diabetes_drugs_users(filename, dd, co_payment=None, chunksize=10, n_job
     for f in jobs:
         f.get()
 
-    # Collapse the results in a single DataFrame
-    index = set()
-    for k in results.keys():
-        for i in results[k]:  # FIXME find a way to avoid nested loops
-            index.add(i)
+    # Check for monthly breakdown flag
+    if monthly_breakdown:
+        print('[!!] Monthly breakdown ON [!!]')
+    else:
+        # Collapse the results in a single DataFrame
+        index = set()
+        for k in results.keys():
+            content = results[k]['PTNT_ID']  # extrapolate the only relevant field
+            for item in content:  # FIXME find a way to avoid nested loops
+                index.add(item)
 
-    return list(index)
+        return list(index)
 
 
-def find_population_of_interest(pbs_files, filter_copayments=True, chunksize=10, n_jobs=1):
+def find_population_of_interest(pbs_files, filter_copayments=True, monthly_breakdown=False,
+                                chunksize=10, n_jobs=1):
     """Search people using diabetes drugs in input PBS files.
 
     Parameters:
@@ -148,6 +164,9 @@ def find_population_of_interest(pbs_files, filter_copayments=True, chunksize=10,
         total cost < copayment(year) will be excluded. This improves
         consistency for entries that are issued after April 2012. This only
         holds for General Beneficiaries.
+
+    monthly_breakdown: bool (default=False)
+        When True, split the records in different months for each year.
 
     chunksize: integer
         The number of rows the PBS file should be split into.
@@ -194,7 +213,9 @@ def find_population_of_interest(pbs_files, filter_copayments=True, chunksize=10,
             co_payment = None
 
         print('Reading {} ...'.format(_pbs))
-        index[_pbs] = find_diabetes_drugs_users(pbs, dd, co_payment,
+        index[_pbs] = find_diabetes_drugs_users(pbs, dd,
+                                                co_payment=co_payment,
+                                                monthly_breakdown=monthly_breakdown,
                                                 chunksize=chunksize,
                                                 n_jobs=n_jobs)
         print('done.')
@@ -210,7 +231,7 @@ def filter_population_of_interest(df, target_year=2012):
     Parameters:
     --------------
     df: dictionary
-        The output of find_population_of_interest()
+        The output of find_population_of_interest().
 
     target_year: integer (default=2012)
         The target year
@@ -244,12 +265,13 @@ def main():
     pbs_files_fullpath = [os.path.join(args.root, '{}'.format(pbs)) for pbs in pbs_files]
     df = find_population_of_interest(pbs_files_fullpath,
                                      filter_copayments=args.filter_copayments,
-                                     chunksize=3000, n_jobs=4)
+                                     monthly_breakdown=args.monthly_breakdown,
+                                     chunksize=10000, n_jobs=32)
 
-    with open('tmp/df3.pkl', 'wb') as f:  # FIXME
+    with open('tmp/df.pkl', 'wb') as f:  # FIXME
         pkl.dump(df, f)
 
-    with open('tmp/df3.pkl', 'rb') as f:  # FIXME
+    with open('tmp/df.pkl', 'rb') as f:  # FIXME
         df = pkl.load(f)
 
     # Find, for each year, the number of people that STARTED taking
@@ -259,7 +281,7 @@ def main():
     print(len(pos_subj_ids))
 
     # FIXME
-    pd.DataFrame(data=pos_subj_ids, columns=['PTNT_ID']).to_csv('tmp/pos_subj_ids3.csv', index=False)
+    pd.DataFrame(data=pos_subj_ids, columns=['PTNT_ID']).to_csv('tmp/pos_subj_ids.csv', index=False)
 
 
 
