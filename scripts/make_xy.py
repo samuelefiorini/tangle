@@ -20,9 +20,11 @@ These individuals will be labeled as our positive class (y = 1).
 
 import argparse
 import cPickle as pkl
+import calendar
+import datetime
 import multiprocessing as mp
-import os
 from multiprocessing import Manager
+import os
 
 import numpy as np
 import pandas as pd
@@ -114,9 +116,11 @@ def find_diabetes_drugs_users(filename, dd, co_payment=None,
 
     Returns:
     --------------
-    index: list
+    index: list or dictionary
         The list of unique patients identifiers that were prescribed to dibates
-        drugs in the input pbs file
+        drugs in the input pbs file. If monthly_breakdown is True, the function
+        returns a dictionary of lists, where each key is a month.
+        E.g.: {1: (232,2312,442,...), 2: (11,678,009,...), ...}
     """
     manager = Manager()
     results = manager.dict()
@@ -138,9 +142,26 @@ def find_diabetes_drugs_users(filename, dd, co_payment=None,
 
     # Check for monthly breakdown flag
     if monthly_breakdown:
-        print('[!!] Monthly breakdown ON [!!]')
+        indexes = {m: set() for m in range(1, 13)}  # each key is a month
+        year = int(results[0]['SPPLY_DT'].values[0][-4:])  # retrieve the current year
+
+        for k in results.keys(): # collapse all the results in a single object
+            content = results[k]
+            content['SPPLY_DT'] = pd.to_datetime(content['SPPLY_DT'], format='%d%b%Y') # set the right date format
+
+            for month in range(1, 13):  # search for all possible months
+                _, last_day = calendar.monthrange(year, month)
+
+                # filter the items of the current month
+                ptnt_id_month = content[np.logical_and(content['SPPLY_DT'] >= datetime.date(year=year, month=month, day=1), content['SPPLY_DT'] <= datetime.date(year=year, month=month, day=last_day))]['PTNT_ID']
+
+                for item in ptnt_id_month:  # iterate over the possible PTNT_IDs
+                    indexes[month].add(item)
+
+        return {m: list(indexes[m]) for m in range(1, 13)}
+
     else:
-        # Collapse the results in a single DataFrame
+        # Collapse the results in a single set
         index = set()
         for k in results.keys():
             content = results[k]['PTNT_ID']  # extrapolate the only relevant field
@@ -193,6 +214,10 @@ def find_population_of_interest(pbs_files, filter_copayments=True, monthly_break
             dd.add(str(0)+item)
         else:
             dd.add(item)
+
+    # Check for monthly breakdown flag
+    if monthly_breakdown:
+        print('[!!] Monthly breakdown ON [!!]')
 
     # Load the Co-payments thresholds
     if filter_copayments:
@@ -268,20 +293,20 @@ def main():
                                      monthly_breakdown=args.monthly_breakdown,
                                      chunksize=10000, n_jobs=32)
 
-    with open('tmp/df.pkl', 'wb') as f:  # FIXME
+    with open('tmp/df1.pkl', 'wb') as f:  # FIXME
         pkl.dump(df, f)
 
-    with open('tmp/df.pkl', 'rb') as f:  # FIXME
+    with open('tmp/df1.pkl', 'rb') as f:  # FIXME
         df = pkl.load(f)
 
     # Find, for each year, the number of people that STARTED taking
     # drugs for diabetes; i.e.: people that are prescribed to diabetes drugs in
     # the current year and that were never prescribed before
-    pos_subj_ids = filter_population_of_interest(df, target_year=args.target_year)
-    print(len(pos_subj_ids))
+    #pos_subj_ids = filter_population_of_interest(df, target_year=args.target_year)
+    #print(len(pos_subj_ids))
 
     # FIXME
-    pd.DataFrame(data=pos_subj_ids, columns=['PTNT_ID']).to_csv('tmp/pos_subj_ids.csv', index=False)
+    #pd.DataFrame(data=pos_subj_ids, columns=['PTNT_ID']).to_csv('tmp/pos_subj_ids.csv', index=False)
 
 
 
