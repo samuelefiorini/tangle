@@ -1,4 +1,4 @@
-"""Utility functions to load/visualize MBS-PBS 10% dataset."""
+"""Utility functions to load/visualize/check MBS-PBS 10% dataset."""
 
 from __future__ import division
 
