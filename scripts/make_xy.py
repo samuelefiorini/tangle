@@ -105,13 +105,11 @@ def main():
         filename = args.output if args.output.endswith('.pkl') else args.output+'.pkl'
 
     # print('- Saving {} ...'.format(filename))
-    # with open(filename, 'wb') as f:  # FIXME
-    #     pkl.dump(dd, f)
+    # pkl.dump(dd, open(filename, 'wb')) # FIXME
     # print('done.')
 
     print('- Loading {} ...'.format(filename))
-    with open(filename, 'rb') as f:  # FIXME
-        dd = pkl.load(f)
+    dd = pkl.load(open(filename, 'rb')) # FIXME
     print('done.')
 
     # Find, for each year, the number of people that STARTED taking

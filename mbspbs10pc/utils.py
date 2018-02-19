@@ -42,7 +42,6 @@ def check_input(root):
         warnings.warn('File {} not found'.format(sample_pin_lookout))
 
 
-
 def show_most_frequent(x, top_k=25, dpi=100, column=None, **kwargs):
     """Show the most frequent elements in a bar chart.
 
