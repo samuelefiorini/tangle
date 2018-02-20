@@ -1,7 +1,7 @@
 # Scripts
 
 These scripts are meant to extract relevant information from the raw MBS-PBS 10% dataset.
-To run these scripts you are supposed to have to have organized the MBS-PBS 10% dataset in the folder `../../../data`.
+To run these scripts you are supposed to have to have organized the MBS-PBS 10% dataset in a folder (*e.g.:* `../../../data`).
 
 ## Usage and details
 -----
