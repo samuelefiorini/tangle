@@ -69,7 +69,7 @@ def init_main():
     # Check input dataset
     if args.root is None:
         args.root = os.path.join('..', '..', 'data')
-    if not args.skip_input_check: check_input(args.root)
+    if not args.skip_input_check: check_input(args.root) # TODO DELETE inconsistent not
 
     # Check target year
     if args.target_year not in list(range(2008, 2015)):
