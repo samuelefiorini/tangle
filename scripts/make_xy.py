@@ -108,13 +108,13 @@ def main():
                                                chunksize=10000, n_jobs=32)
 
         # Dump results
-        print('* Saving {} ...'.format(filename), end=' ')
+        print('* Saving {} '.format(filename), end=' ')
         pkl.dump(dd, open(filename, 'wb'))
         # print('done.\n')
         print(u'\u2713')
     else:
         # Otherwise just load it
-        print('* Loading {} ...'.format(filename), end=' ')
+        print('* Loading {} '.format(filename), end=' ')
         dd = pkl.load(open(filename, 'rb'))
         # print('done.')
         print(u'\u2713')
@@ -122,28 +122,35 @@ def main():
     # Find, for each year, the number of people that STARTED taking
     # drugs for diabetes; i.e.: people that are prescribed to diabetes drugs in
     # the current year and that were never prescribed before
-    pos_id = utils.find_positive_samples(dd, target_year=args.target_year)
+    # This is our POSITIVE class.
+    filename_1 = filename[:-4]+'_class_1.csv'
+    if not os.path.exists(filename_1):
+        pos_id = utils.find_positive_samples(dd, target_year=args.target_year)
+        print('* Saving {}'.format(filename_1), end=' ')
+        pd.DataFrame(data=pos_id, columns=['PTNT_ID']).to_csv(filename_1, index=False)
+        print(u'\u2713')
+    else:
+        pos_id = pd.read_csv(filename_1, header=0).values.ravel()
     print('* I found {} positive samples'.format(len(pos_id)))
 
-    # FIXME
-    filename_1 = filename[:-4]+'_class_1.csv'
-    print('* Saving {}'.format(filename_1), end=' ')
-    pd.DataFrame(data=pos_id, columns=['PTNT_ID']).to_csv(filename_1, index=False)
-    print(u'\u2713')
-
     # Find people that were NEVER prescribed with diabetes control drugs
-    print('* Looking for the negative samples ...')  # progress bar embedded
-    neg_id = utils.find_negative_samples(pbs_files_fullpath, dd)
-    print('* I found {} negative samples'.format(len(neg_id)))
-
+    # in the years (2008-2014).
+    # This is our NEGATIVE class.
     filename_0 = filename[:-4]+'_class_0.csv'
-    print('* Saving {}'.format(filename_0), end=' ')
-    pd.DataFrame(data=neg_id, columns=['PTNT_ID']).to_csv(filename_0, index=False)
-    print(u'\u2713')
+    if not os.path.exists(filename_0):
+        print('* Looking for the negative samples ...')  # progress bar embedded
+        neg_id = utils.find_negative_samples(pbs_files_fullpath, dd)
+        print('* Saving {}'.format(filename_0), end=' ')
+        pd.DataFrame(data=neg_id, columns=['PTNT_ID']).to_csv(filename_0, index=False)
+        print(u'\u2713')
+    else:
+        neg_id = pd.read_csv(filename_0, header=0).values.ravel()
+    print('* I found {} negative samples'.format(len(neg_id)))
 
     # Sanity check: no samples should be in common between positive and negative class
     assert(len(set(pos_id).intersection(set(neg_id))) == 0)
-    print('* Negative and positive class do not overlap')
+    print('* Negative and positive class do not overlap', end=' ')
+    print(u'\u2713')
 
 
 
