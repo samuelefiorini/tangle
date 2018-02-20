@@ -66,7 +66,7 @@ def main():
 
     # PBS 10% dataset files
     pbs_files = filter(lambda x: x.startswith('PBS'), os.listdir(args.root))
-    pbs_files_fullpath = [os.path.join(args.root, '{}'.format(pbs)) for pbs in pbs_files]
+    pbs_files_fullpath = [os.path.join(args.root, pbs) for pbs in pbs_files]
 
     # Find the continuously concessionals (Condition #1)
     filename = args.output+'cc_.pkl'
@@ -74,7 +74,7 @@ def main():
         cc = utils.find_continuously_concessionals(pbs_files_fullpath)
         print('* {} Subjects continuously use concessional cards')
         print('* Saving {} '.format(filename), end=' ')
-        pkl.dump(cc, open(filename, 'wb')))
+        pkl.dump(cc, open(filename, 'wb'))
         print(u'\u2713')
 
 
