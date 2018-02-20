@@ -101,6 +101,7 @@ def main():
     pbs_files = filter(lambda x: x.startswith('PBS'), os.listdir(args.root))
     # sample_pin_lookout = filter(lambda x: x.startswith('SAMPLE'), os.listdir(args.root))[0]
 
+    # ----------------------------- MAKE Y ----------------------------- #
     # Filter the population of people using drugs for diabetes
     pbs_files_fullpath = [os.path.join(args.root, '{}'.format(pbs)) for pbs in pbs_files]
 
@@ -163,18 +164,19 @@ def main():
     print('* Negative and positive class do not overlap', end=' ')
     print(u'\u2713')
 
+    # ----------------------------- MAKE X ----------------------------- #
     # Now build the raw sequence data for each subject
     filename_x_1 = filename[:-4]+'_seq_0.csv'
     if not os.path.exists(filename_x_1):
         print('* Sequences extracion ...')
         pos_seq = utils.extract_sequences(mbs_files, pos_id)
         print('* Saving {}'.format(filename_x_1), end=' ')
-        pd.DataFrame(data=pos_seq, columns=['Sequence'], index=pos_id).to_csv(filename_x_1)
+        pd.DataFrame.from_dict(pos_seq, orient='index').rename({0: 'Sequence'}, axis=1).to_csv(filename_x_1)
         print(u'\u2713')
     else:
         pos_seq = pd.read_csv(filename_x_1, header=0, index_col=0)
 
-    # -- then do the same for the negative class -- #
+    # then do the same for the negative class ...
 
 
 

@@ -282,5 +282,16 @@ def extract_sequences(mbs_files, pntn_id):
     ptnt_id: list:
         The list of patient IDs returned find_<XXX>_samples(), where <XXX> is
         either 'positive' or 'negative'.
+
+    Returns:
+    --------------
+    seq: dictionary
+        A dictionary having the `'PTNT_ID'` as key and the corresponding
+        MBS sequence as value.
     """
-    return 0
+    seq = dict()
+    for mbs in mbs_files:
+        
+
+
+    return seq
