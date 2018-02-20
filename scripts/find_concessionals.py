@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 """Find concessional subjects in the PBS files.
 
-This script finds continuously concessional subjects in the PBS files (2008 -
-2014). In order to be considered continuously concessional, a subject must:
+This script finds continuously and consistently concessional subjects in the
+PBS files (2008 - 2014). In order to be considered continuously and
+consistently concessional, a subject must:
 
     1) continuously use the concessional cards, i.e.: they use it for at least
        50% of the observation years,
-    2) satisfy the condition at point 1) for at least 50% of the PBS benefit
-       items each year
+    2) consistently satisfy the condition at point 1), i.e.: for at least 50%
+       of the PBS benefit items each year.
 """
 
 from __future__ import print_function
@@ -69,18 +70,30 @@ def main():
     pbs_files_fullpath = [os.path.join(args.root, pbs) for pbs in pbs_files]
 
     # Find the continuously concessionals (Condition #1)
-    filename = args.output+'cc_.pkl'
+    filename = args.output+'_cc_.pkl'
     if not os.path.exists(filename):
-        cc = utils.find_continuously_concessionals(pbs_files_fullpath)
-        print('* {} Subjects continuously use concessional cards'.format(len(cc)))
+        print('* Looking for continuously concessionals ...')
+        cont_conc = utils.find_continuously_concessionals(pbs_files_fullpath)
+        print('* {} Subjects continuously use concessional cards'.format(len(cont_conc)))
         print('* Saving {} '.format(filename), end=' ')
-        pkl.dump(cc, open(filename, 'wb'))
+        pkl.dump(cont_conc, open(filename, 'wb'))
         print(u'\u2713')
     else:
-        cc = pkl.load(open(filename, 'rb'))
+        cont_conc = pkl.load(open(filename, 'rb'))
 
     # Filter out the subjects that are not using the concessional cards for at
     # least 50% of the times for each year
+    filename = args.output+'_filter_cc_.pkl'
+    if not os.path.exists(filename):
+        print('* Looking for consistently concessionals ...')
+        cons_conc = utils.find_consistently_concessionals(pbs_files_fullpath, cont_conc)
+        print('* {} Subjects consistently use concessional cards'.format(len(cons_conc)))
+        print('* Saving {} '.format(filename), end=' ')
+        pkl.dump(cons_conc, open(filename, 'wb'))
+        print(u'\u2713')
+    else:
+        cons_conc = pkl.load(open(filename, 'rb'))
+
 
 
 
