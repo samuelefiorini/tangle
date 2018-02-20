@@ -86,7 +86,7 @@ def main():
     filename = args.output+'_cons_.pkl'
     if not os.path.exists(filename):
         print('* Looking for consistently concessionals ...')
-        cons_conc = utils.find_consistently_concessionals(pbs_files_fullpath, cont_conc)
+        cons_conc = utils.find_consistently_concessionals(pbs_files_fullpath)
         print('* {} Subjects consistently use concessional cards'.format(len(cons_conc)))
         print('* Saving {} '.format(filename), end=' ')
         pkl.dump(cons_conc, open(filename, 'wb'))
