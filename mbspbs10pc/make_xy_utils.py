@@ -8,6 +8,7 @@ from multiprocessing import Manager
 import numpy as np
 import pandas as pd
 from mbspbs10pc.extra import timed
+from tqdm import tqdm
 
 
 def process_chunk(i, chunk, results, dd, co_payment):
@@ -28,7 +29,7 @@ def process_chunk(i, chunk, results, dd, co_payment):
         results[i] = content  # contenta has 'PTNT_ID' and 'SPPLY_DT'
 
 
-@timed
+# @timed
 def find_diabetes_drugs_users(filename, dd, co_payment=None,
                               monthly_breakdown=False, chunksize=10, n_jobs=1):
     """Find the diabetes drugs user from a PBS file.
@@ -117,7 +118,7 @@ def find_diabetes_drugs_users(filename, dd, co_payment=None,
         return list(index)
 
 
-@timed
+# @timed
 def find_population_of_interest(pbs_files, filter_copayments=True, monthly_breakdown=False,
                                 chunksize=10, n_jobs=1):
     """Search people using diabetes drugs in input PBS files.
@@ -170,7 +171,7 @@ def find_population_of_interest(pbs_files, filter_copayments=True, monthly_break
     # Itereate on the pbs files and get the index of the individuals that
     # were prescribed to diabes drugs
     index = dict()
-    for pbs in pbs_files:
+    for pbs in tqdm(pbs_files):
         _pbs = os.path.split(pbs)[-1]  # more visually appealing
 
         if filter_copayments:  # Select the appropriate co-payment threshold
@@ -179,13 +180,13 @@ def find_population_of_interest(pbs_files, filter_copayments=True, monthly_break
         else:
             co_payment = None
 
-        print('- Reading {} ...'.format(_pbs))
+        # print('- Reading {} ...'.format(_pbs))
         index[_pbs] = find_diabetes_drugs_users(pbs, dd,
                                                 co_payment=co_payment,
                                                 monthly_breakdown=monthly_breakdown,
                                                 chunksize=chunksize,
                                                 n_jobs=n_jobs)
-        print('done.')
+        # print('done.')
     return index
 
 
@@ -223,7 +224,7 @@ def find_positive_samples(dd, target_year=2012):
 
         return list(positive_subjects)
 
-@timed
+# @timed
 def find_negative_samples(pbs_files, dd):
     """Find the negative samples PTNT_ID.
 
@@ -257,13 +258,13 @@ def find_negative_samples(pbs_files, dd):
         for year in np.arange(2008, 2014): # FIXME as soon as you get all PBS files
             diabetic_overall |= set(dd['PBS_SAMPLE_10PCT_'+str(year)+'.csv'])
 
-        for pbs in pbs_files: # TODO maybe use multiprocessing here
+        for pbs in tqdm(pbs_files): # TODO maybe use multiprocessing here
             _pbs = os.path.split(pbs)[-1]  # more visually appealing
 
-            print('- Reading {} ...'.format(_pbs))
+            # print('- Reading {} ...'.format(_pbs))
             curr = set(pd.read_csv(pbs, header=0, usecols=['PTNT_ID']).values.ravel())
             # iteratively increase the set of indexes
             negative_subjects |= set(filter(lambda x: x not in diabetic_overall, curr))
-            print('done.')
+            # print('done.')
 
         return list(negative_subjects)

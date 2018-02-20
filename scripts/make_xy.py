@@ -22,6 +22,7 @@ Remarks:
   See data/co-payments_08-18.csv. This only holds for General Beneficiaries.
 """
 
+from __future__ import print_function
 import argparse
 import cPickle as pkl
 import datetime
@@ -92,49 +93,57 @@ def main():
     # Filter the population of people using drugs for diabetes
     pbs_files_fullpath = [os.path.join(args.root, '{}'.format(pbs)) for pbs in pbs_files]
 
-    # dd = utils.find_population_of_interest(pbs_files_fullpath,
-    #                                        filter_copayments=args.filter_copayments,
-    #                                        monthly_breakdown=args.monthly_breakdown,
-    #                                        chunksize=10000, n_jobs=32)
-    #
-
-    # Dump results
+    # Check output filename
     if args.output is None:
         filename = 'DumpFile'+str(datetime.now())+'.pkl'
     else:
         filename = args.output if args.output.endswith('.pkl') else args.output+'.pkl'
 
-    # print('- Saving {} ...'.format(filename))
-    # pkl.dump(dd, open(filename, 'wb')) # FIXME
-    # print('done.')
+    # If the output file doesn't exist, scan the MBS-PBS dataset and create it
+    if not os.path.exists(filename):
+        print('* Looking for the positive samples ...')  # progress bar embedded
+        dd = utils.find_population_of_interest(pbs_files_fullpath,
+                                               filter_copayments=args.filter_copayments,
+                                               monthly_breakdown=args.monthly_breakdown,
+                                               chunksize=10000, n_jobs=32)
 
-    print('- Loading {} ...'.format(filename))
-    dd = pkl.load(open(filename, 'rb')) # FIXME
-    print('done.')
+        # Dump results
+        print('* Saving {} ...'.format(filename), end=' ')
+        pkl.dump(dd, open(filename, 'wb'))
+        # print('done.\n')
+        print(u'\u2713')
+    else:
+        # Otherwise just load it
+        print('* Loading {} ...'.format(filename), end=' ')
+        dd = pkl.load(open(filename, 'rb'))
+        # print('done.')
+        print(u'\u2713')
 
     # Find, for each year, the number of people that STARTED taking
     # drugs for diabetes; i.e.: people that are prescribed to diabetes drugs in
     # the current year and that were never prescribed before
     pos_id = utils.find_positive_samples(dd, target_year=args.target_year)
-    print('- {} positive samples'.format(len(pos_id)))
+    print('* I found {} positive samples'.format(len(pos_id)))
 
     # FIXME
     filename_1 = filename[:-4]+'_class_1.csv'
-    print('- Saving {} ...'.format(filename_1))
+    print('* Saving {}'.format(filename_1), end=' ')
     pd.DataFrame(data=pos_id, columns=['PTNT_ID']).to_csv(filename_1, index=False)
-    print('done.')
+    print(u'\u2713')
 
     # Find people that were NEVER prescribed with diabetes control drugs
+    print('* Looking for the negative samples ...')  # progress bar embedded
     neg_id = utils.find_negative_samples(pbs_files_fullpath, dd)
-    print('- {} negative samples'.format(len(neg_id)))
+    print('* I found {} negative samples'.format(len(neg_id)))
 
     filename_0 = filename[:-4]+'_class_0.csv'
-    print('- Saving {} ...'.format(filename_0))
+    print('* Saving {}'.format(filename_0), end=' ')
     pd.DataFrame(data=neg_id, columns=['PTNT_ID']).to_csv(filename_0, index=False)
-    print('done.')
+    print(u'\u2713')
 
     # Sanity check: no samples should be in common between positive and negative class
     assert(len(set(pos_id).intersection(set(neg_id))) == 0)
+    print('* Negative and positive class do not overlap')
 
 
 
