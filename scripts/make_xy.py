@@ -20,6 +20,10 @@ Remarks:
   Where total cost is 'BNFT_AMT'+'PTNT_CNTRBTN_AMT'.
   Be aware that the threshold varies in the years.
   See data/co-payments_08-18.csv. This only holds for General Beneficiaries.
+
+ * Monthly breakdown can be turned on for visualization purposes (see for
+   instance the summary notebook). Anyway, once you have selected a target year
+   a monthly breakdown is always run to find the sequences.
 """
 
 from __future__ import print_function
@@ -43,7 +47,7 @@ def parse_arguments():
     parser.add_argument('-t', '--target_year', type=int,
                         help='Diabetes drug starting year.', default=2012)
     parser.add_argument('-o', '--output', type=str,
-                        help='Temporary file pikle output.',
+                        help='Temporary file pickle output.',
                         default=None)
     parser.add_argument('-s', '--skip_input_check', action='store_false',
                         help='Skip the input check (default=False).')
@@ -93,7 +97,7 @@ def main():
     print('------------------------------------------')
 
     # MBS-PBS 10% dataset files
-    # mbs_files = filter(lambda x: x.startswith('MBS'), os.listdir(args.root))
+    mbs_files = filter(lambda x: x.startswith('MBS'), os.listdir(args.root))
     pbs_files = filter(lambda x: x.startswith('PBS'), os.listdir(args.root))
     # sample_pin_lookout = filter(lambda x: x.startswith('SAMPLE'), os.listdir(args.root))[0]
 
@@ -102,7 +106,7 @@ def main():
 
     # Check output filename
     if args.output is None:
-        filename = 'DumpFile'+str(datetime.now())+'.pkl'
+        filename = 'dumpFile'+str(datetime.now())+'.pkl'
     else:
         filename = args.output if args.output.endswith('.pkl') else args.output+'.pkl'
 
@@ -112,7 +116,8 @@ def main():
         dd = utils.find_population_of_interest(pbs_files_fullpath,
                                                filter_copayments=args.filter_copayments,
                                                monthly_breakdown=args.monthly_breakdown,
-                                               chunksize=args.chunk_size, n_jobs=args.n_jobs)
+                                               chunksize=args.chunk_size,
+                                               n_jobs=args.n_jobs)
 
         # Dump results
         print('* Saving {} '.format(filename), end=' ')
@@ -123,41 +128,54 @@ def main():
         # Otherwise just load it
         print('* Loading {} '.format(filename), end=' ')
         dd = pkl.load(open(filename, 'rb'))
-        # print('done.')
         print(u'\u2713')
 
     # Find, for each year, the number of people that STARTED taking
     # drugs for diabetes; i.e.: people that are prescribed to diabetes drugs in
     # the current year and that were never prescribed before
     # This is our POSITIVE class.
-    filename_1 = filename[:-4]+'_class_1.csv'
-    if not os.path.exists(filename_1):
+    filename_y_1 = filename[:-4]+'_class_1.csv'
+    if not os.path.exists(filename_y_1):
         pos_id = utils.find_positive_samples(dd, target_year=args.target_year)
-        print('* Saving {}'.format(filename_1), end=' ')
-        pd.DataFrame(data=pos_id, columns=['PTNT_ID']).to_csv(filename_1, index=False)
+        print('* Saving {}'.format(filename_y_1), end=' ')
+        pd.DataFrame(data=pos_id, columns=['PTNT_ID']).to_csv(filename_y_1, index=False)
         print(u'\u2713')
     else:
-        pos_id = pd.read_csv(filename_1, header=0).values.ravel()
+        pos_id = pd.read_csv(filename_y_1, header=0).values.ravel()
     print('* I found {} positive samples'.format(len(pos_id)))
 
     # Find people that were NEVER prescribed with diabetes control drugs
     # in the years (2008-2014).
     # This is our NEGATIVE class.
-    filename_0 = filename[:-4]+'_class_0.csv'
-    if not os.path.exists(filename_0):
+    filename_y_0 = filename[:-4]+'_class_0.csv'
+    if not os.path.exists(filename_y_0):
         print('* Looking for the negative samples ...')  # progress bar embedded
         neg_id = utils.find_negative_samples(pbs_files_fullpath, dd)
-        print('* Saving {}'.format(filename_0), end=' ')
-        pd.DataFrame(data=neg_id, columns=['PTNT_ID']).to_csv(filename_0, index=False)
+        print('* Saving {}'.format(filename_y_0), end=' ')
+        pd.DataFrame(data=neg_id, columns=['PTNT_ID']).to_csv(filename_y_0, index=False)
         print(u'\u2713')
     else:
-        neg_id = pd.read_csv(filename_0, header=0).values.ravel()
+        neg_id = pd.read_csv(filename_y_0, header=0).values.ravel()
     print('* I found {} negative samples'.format(len(neg_id)))
 
     # Sanity check: no samples should be in common between positive and negative class
     assert(len(set(pos_id).intersection(set(neg_id))) == 0)
     print('* Negative and positive class do not overlap', end=' ')
     print(u'\u2713')
+
+    # Now build the raw sequence data for each subject
+    filename_x_1 = filename[:-4]+'_seq_0.csv'
+    if not os.path.exists(filename_x_1):
+        print('* Sequences extracion ...')
+        pos_seq = utils.extract_sequences(mbs_files, pos_id)
+        print('* Saving {}'.format(filename_x_1), end=' ')
+        pd.DataFrame(data=pos_seq, columns=['Sequence'], index=pos_id).to_csv(filename_x_1)
+        print(u'\u2713')
+    else:
+        pos_seq = pd.read_csv(filename_x_1, header=0, index_col=0)
+
+    # -- then do the same for the negative class -- #
+
 
 
 ################################################################################

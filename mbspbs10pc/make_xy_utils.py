@@ -269,3 +269,18 @@ def find_negative_samples(pbs_files, dd):
             # print('done.')
 
         return list(negative_subjects)
+
+
+def extract_sequences(mbs_files, pntn_id):
+    """Extract the raw sequences from the MBS files for each input subject.
+
+    Parameters:
+    --------------
+    mbs_files: list
+        List of input MBS filenames.
+
+    ptnt_id: list:
+        The list of patient IDs returned find_<XXX>_samples(), where <XXX> is
+        either 'positive' or 'negative'.
+    """
+    return 0
