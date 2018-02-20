@@ -4,7 +4,8 @@ These scripts are meant to extract relevant information from the raw MBS-PBS 10%
 To run these scripts you are supposed to have to have organized the MBS-PBS 10% dataset in a folder (*e.g.:* `../../../data`).
 
 ## Usage and details
------
+
+
 Usage example:
 
 `$ make_xy.py --root <ROOT> --target_year <YYYY> --output <FILENAME> --filter_copayments --monthly_breakdown`
