@@ -70,7 +70,7 @@ def main():
     pbs_files_fullpath = [os.path.join(args.root, pbs) for pbs in pbs_files]
 
     # Find the continuously concessionals (Condition #1)
-    filename = args.output+'_cc_.pkl'
+    filename = args.output+'_cont_.pkl'
     if not os.path.exists(filename):
         print('* Looking for continuously concessionals ...')
         cont_conc = utils.find_continuously_concessionals(pbs_files_fullpath)
@@ -83,7 +83,7 @@ def main():
 
     # Filter out the subjects that are not using the concessional cards for at
     # least 50% of the times for each year
-    filename = args.output+'_filter_cc_.pkl'
+    filename = args.output+'_cons_.pkl'
     if not os.path.exists(filename):
         print('* Looking for consistently concessionals ...')
         cons_conc = utils.find_consistently_concessionals(pbs_files_fullpath, cont_conc)
