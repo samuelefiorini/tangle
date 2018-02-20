@@ -53,6 +53,11 @@ def parse_arguments():
                         ' (default=True).')
     parser.add_argument('-mb', '--monthly_breakdown', action='store_true',
                         help='Split records in different months (default=True).')
+    parser.add_argument('-nj', '--n_jobs', type=int,
+                        help='The number of processes to use.', default=4)
+    parser.add_argument('-cs', '--chunk_size', type=int,
+                        help='The numer of rows each process has access to.',
+                        default=1000)
     args = parser.parse_args()
     return args
 
@@ -80,7 +85,9 @@ def main():
     print('------------------------------------------')
 
     print('* Root data folder: {}'.format(args.root))
-    print('* Target year: {}\n'.format(args.target_year))
+    print('* Target year: {}'.format(args.target_year))
+    print('* Number of jobs: {}'.format(args.n_jobs))
+    print('* Chunk size: {}\n'.format(args.chunk_size))
     print('[{}] Co-payment filter: {}'.format(*('+', 'ON') if args.filter_copayments else (' ', 'OFF')))
     print('[{}] Monthly breakdown: {}'.format(*('+', 'ON') if args.monthly_breakdown else (' ', 'OFF')))
     print('------------------------------------------')
@@ -105,7 +112,7 @@ def main():
         dd = utils.find_population_of_interest(pbs_files_fullpath,
                                                filter_copayments=args.filter_copayments,
                                                monthly_breakdown=args.monthly_breakdown,
-                                               chunksize=10000, n_jobs=32)
+                                               chunksize=args.chunk_size, n_jobs=args.n_jobs)
 
         # Dump results
         print('* Saving {} '.format(filename), end=' ')
@@ -151,8 +158,6 @@ def main():
     assert(len(set(pos_id).intersection(set(neg_id))) == 0)
     print('* Negative and positive class do not overlap', end=' ')
     print(u'\u2713')
-
-
 
 
 ################################################################################
