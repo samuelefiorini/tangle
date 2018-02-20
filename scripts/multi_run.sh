@@ -5,4 +5,4 @@
 # clear; python scripts/make_xy.py -o tmp/3_df_yearly_no_copayment.pkl -fc
 # clear; python scripts/make_xy.py -o tmp/4_df_monthly_no_copayment.pkl -mb -fc
 
-clear; python scripts/find_concessionals.py -s 
+clear; python scripts/find_concessionals.py -s -o tmp/dump1

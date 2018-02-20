@@ -14,8 +14,8 @@ from __future__ import print_function
 
 import argparse
 import cPickle as pkl
-import datetime
 import os
+from datetime import datetime
 
 import mbspbs10pc.find_concessionals_utils as utils
 from mbspbs10pc.utils import check_input
@@ -72,10 +72,15 @@ def main():
     filename = args.output+'cc_.pkl'
     if not os.path.exists(filename):
         cc = utils.find_continuously_concessionals(pbs_files_fullpath)
-        print('* {} Subjects continuously use concessional cards')
+        print('* {} Subjects continuously use concessional cards'.format(len(cc)))
         print('* Saving {} '.format(filename), end=' ')
         pkl.dump(cc, open(filename, 'wb'))
         print(u'\u2713')
+    else:
+        cc = pkl.load(open(filename, 'rb'))
+
+    # Filter out the subjects that are not using the concessional cards for at
+    # least 50% of the times for each year
 
 
 

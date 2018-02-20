@@ -6,6 +6,7 @@ import multiprocessing as mp
 import time
 from collections import Counter
 from multiprocessing import Manager
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -50,23 +51,25 @@ def find_continuously_concessionals(pbs_files):
 
     Returns:
     --------------
-    idx: list
-        The list of PTNT_ID after the filtering step.
+    idx: pandas.Index
+        The PTNT_IDs after the filtering step.
     """
     c0c1 = []
     # scan the pbs files and select only the two columns of interest and save
     # the PTNT_ID of the subjects using C0 or C1
-    for pbs in tqdm(pbs_files):
-        df = pd.read_csv(pbs, header=0, index_col=0,
-                         usecols=['PTNT_ID', 'PTNT_CTGRY_DRVD_CD'])
-        c0c1.append(df.loc[df['PTNT_CTGRY_DRVD_CD'].isin(['C0', 'C1'])].index.tolist())
+    with warnings.catch_warnings(): # ignore FutureWarning
+        warnings.simplefilter(action='ignore', category=FutureWarning)
+        for pbs in tqdm(pbs_files):
+            df = pd.read_csv(pbs, header=0, index_col=0,
+                             usecols=['PTNT_ID', 'PTNT_CTGRY_DRVD_CD'])
+            _c0c1 = df.loc[df['PTNT_CTGRY_DRVD_CD'].isin(['C0', 'C1'])].index
+            c0c1.append(np.unique(_c0c1))
     c0c1 = flatten(c0c1)
     # then count the number of times an index appears
-    c0c1_counts = pd.DataFrame.from_dict(Counter(c0c1), orient='index').rename({1: 'COUNTS'}, axis=1)
+    c0c1_counts = pd.DataFrame.from_dict(Counter(c0c1), orient='index').rename({0: 'COUNTS'}, axis=1)
     # return only the subjects that use concessional cards for at least
     # 50% of the years of observation
-    idx = c0c1_counts[c0c1_counts['COUNTS'] >= __C0C1_THRESH__*len(pbs_files)].index
-    return idx.tolist()
+    return c0c1_counts[c0c1_counts['COUNTS'] >= __C0C1_THRESH__*len(pbs_files)].index
 
 
 def __step_1(pbs_files):
