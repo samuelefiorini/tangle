@@ -1,4 +1,4 @@
-"""This function module has all the functions needed to detect concessionals."""
+"""This module has all the functions needed to detect concessionals."""
 
 from __future__ import division, print_function
 

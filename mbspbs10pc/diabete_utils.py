@@ -1,4 +1,4 @@
-"""This function module has all the functions needed to detect diabetics."""
+"""This module has all the functions needed to detect diabetics."""
 
 import calendar
 import datetime
