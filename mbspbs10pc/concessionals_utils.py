@@ -39,12 +39,12 @@ def find_continuously_concessionals(pbs_files):
     with warnings.catch_warnings():  # ignore FutureWarning
         warnings.simplefilter(action='ignore', category=FutureWarning)
         # scan the PBS files and select only the two columns of interest and save
-        # the PTNT_ID of the subjects using C0 or C1
+        # the unique PTNT_ID of the subjects using C0 or C1 in the current year
         for pbs in tqdm(pbs_files):
-            df = pd.read_csv(pbs, header=0, index_col=0,
+            df = pd.read_csv(pbs, header=0,
                              usecols=['PTNT_ID', 'PTNT_CTGRY_DRVD_CD'])
-            _c0c1 = df.loc[df['PTNT_CTGRY_DRVD_CD'].isin(['C0', 'C1'])].index
-            c0c1.append(np.unique(_c0c1))
+            _c0c1 = df.loc[df['PTNT_CTGRY_DRVD_CD'].isin(['C0', 'C1'])]['PTNT_ID']
+            c0c1.append(np.unique(_c0c1.values))
     c0c1 = flatten(c0c1)
 
     # then count the number of times an index appears
@@ -77,15 +77,15 @@ def find_consistently_concessionals(pbs_files):
         warnings.simplefilter(action='ignore', category=FutureWarning)
         # scan the PBS files and select only the two columns of interest
         for pbs in tqdm(pbs_files):
-            df = pd.read_csv(pbs, header=0, index_col=0,
+            df = pd.read_csv(pbs, header=0,
                              usecols=['PTNT_ID', 'PTNT_CTGRY_DRVD_CD'])
             # count the number of PBS items of each PTNT_ID
-            df_counter = Counter(df.index)
+            df_counter = Counter(df['PTNT_ID'].values)
 
             # now keep only the PTNT_ID of the subjects using C0 or C1 and count
             # the number of PBS items each
             c0c1 = df.loc[df['PTNT_CTGRY_DRVD_CD'].isin(['C0', 'C1'])]
-            c0c1_counter = Counter(c0c1.index)
+            c0c1_counter = Counter(c0c1['PTNT_ID'].values)
 
             # now calculate the concessional card usage ratio
             usage = {}
@@ -99,7 +99,7 @@ def find_consistently_concessionals(pbs_files):
             # add them to the output set
             for i in usage_df.index: # FIXME find a way to avoid nested loops
                 idx.add(i)
-    
+
     # return all the unique identifiers PTNT_ID that consistently used their
     # concessional cards for at least one observation year
     return idx
