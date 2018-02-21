@@ -3,6 +3,7 @@
 
 # local folders
 **/tmp
+**/__trash
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -1,4 +1,4 @@
-"""This is simply a function module for `find_concessionals.py`."""
+"""This function module has all the functions needed to detect concessionals."""
 
 from __future__ import division, print_function
 
@@ -97,90 +97,9 @@ def find_consistently_concessionals(pbs_files):
             usage_df = usage_df[usage_df['COUNTS'] >= __C0C1_THRESH__]
 
             # add them to the output set
-            for i in usage_df.index:
+            for i in usage_df.index: # FIXME find a way to avoid nested loops
                 idx.add(i)
+    
     # return all the unique identifiers PTNT_ID that consistently used their
     # concessional cards for at least one observation year
     return idx
-
-
-def find_positive_samples(dd, cc, target_year=2012):
-    """Filter the population of interest according to the input target year.
-
-    This function returns the `'PTNT_ID'` of the subjects that started taking
-    diabetes drugs in the target year.
-
-    Parameters:
-    --------------
-    dd: dictionary
-        The output of find_population_of_interest().
-
-    cc: set
-        The intersection between the output of find_continuously_concessionals()
-        and find_consistently_concessionals().
-
-    target_year: integer (default=2012)
-        The target year
-
-    Returns:
-    --------------
-    positive_subjects: list
-        The list of target patient IDs (positive class).
-    """
-    # Init the postive subjects with the full list of people taking
-    # diabetes drugs in the target year
-    positive_subjects = set(dd['PBS_SAMPLE_10PCT_'+str(target_year)+'.csv'])
-    positive_subjects = positive_subjects.intersection(cc)  # keep only the concessionals
-
-    for year in np.arange(2008, target_year)[::-1]:
-        curr = set(dd['PBS_SAMPLE_10PCT_'+str(year)+'.csv'])
-        curr = curr.intersection(cc)  # keep only the concessionals
-        positive_subjects = set(filter(lambda x: x not in curr, positive_subjects))
-
-    return list(positive_subjects)
-
-
-def find_negative_samples(pbs_files, dd, cc):
-    """Find the negative samples PTNT_ID.
-
-    Negative samples are subjects that were NEVER prescribed to diabetes
-    controlling drugs.
-
-    Parameters:
-    --------------
-    pbs_files: list
-        List of input PBS filenames.
-
-    dd: dictionary
-        The output of find_population_of_interest().
-
-    cc: set
-        The intersection between the output of find_continuously_concessionals()
-        and find_consistently_concessionals().
-
-    Returns:
-    --------------
-    negative_subjects: list
-        The list of non target patient IDs (negative class).
-    """
-    # Start with an empty set, the iterate on each year and iteratively add
-    # to the negative subjects list, the patient id that are not selected
-    # as diabetic at the previous step.
-    negative_subjects = set()
-
-    diabetic_overall = set()
-    for year in np.arange(2008, 2014): # FIXME as soon as you get all PBS files
-        diabetic_overall |= set(dd['PBS_SAMPLE_10PCT_'+str(year)+'.csv'])
-    diabetic_overall = diabetic_overall.intersection(cc)   # keep only the concessionals
-
-    for pbs in tqdm(pbs_files): # TODO maybe use multiprocessing here
-        # _pbs = os.path.split(pbs)[-1]  # more visually appealing
-
-        # print('- Reading {} ...'.format(_pbs))
-        curr = set(pd.read_csv(pbs, header=0, usecols=['PTNT_ID']).values.ravel())
-        curr = curr.intersection(cc)  # keep only the concessionals
-        # iteratively increase the set of indexes
-        negative_subjects |= set(filter(lambda x: x not in diabetic_overall, curr))
-        # print('done.')
-
-    return list(negative_subjects)

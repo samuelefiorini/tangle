@@ -18,9 +18,9 @@ import cPickle as pkl
 import os
 from datetime import datetime
 
-import mbspbs10pc.find_concessionals_utils as utils
+from mbspbs10pc import concessionals_utils as c_utils
+from mbspbs10pc import diabete_utils as d_utils
 import pandas as pd
-from mbspbs10pc import make_xy_utils
 from mbspbs10pc.utils import check_input
 
 
@@ -89,7 +89,7 @@ def main():
     filename = args.output+'_cont_.pkl'
     if not os.path.exists(filename):
         print('* Looking for continuously concessionals ...')
-        cont_conc = utils.find_continuously_concessionals(pbs_files_fullpath)
+        cont_conc = c_utils.find_continuously_concessionals(pbs_files_fullpath)
         print('* Saving {} '.format(filename), end=' ')
         pkl.dump(cont_conc, open(filename, 'wb'))
         print(u'\u2713')
@@ -102,7 +102,7 @@ def main():
     filename = args.output+'_cons_.pkl'
     if not os.path.exists(filename):
         print('* Looking for consistently concessionals ...')
-        cons_conc = utils.find_consistently_concessionals(pbs_files_fullpath)
+        cons_conc = c_utils.find_consistently_concessionals(pbs_files_fullpath)
         print('* Saving {} '.format(filename), end=' ')
         pkl.dump(cons_conc, open(filename, 'wb'))
         print(u'\u2713')
@@ -120,11 +120,11 @@ def main():
     filename = args.output+'_dd_.pkl'
     if not os.path.exists(filename):
         print('* Looking for people on diabete control drugs ...')  # progress bar embedded
-        dd = make_xy_utils.find_population_of_interest(pbs_files_fullpath,
-                                                       filter_copayments=False,
-                                                       monthly_breakdown=False,
-                                                       chunksize=args.chunk_size,
-                                                       n_jobs=args.n_jobs)
+        dd = d_utils.find_diabetics(pbs_files_fullpath,
+                                    filter_copayments=False,
+                                    monthly_breakdown=False,
+                                    chunksize=args.chunk_size,
+                                    n_jobs=args.n_jobs)
         print('* Saving {} '.format(filename), end=' ')
         pkl.dump(dd, open(filename, 'wb'))
         print(u'\u2713')
@@ -139,8 +139,8 @@ def main():
     filename = args.output+'_{}_class_1.csv'.format(args.target_year)
     if not os.path.exists(filename):
         print('* Looking for the positive samples ...')  # progress bar embedded
-        pos_id = utils.find_positive_samples(dd, cons_cont_conc,
-                                             target_year=args.target_year)
+        pos_id = d_utils.find_positive_samples(dd, cons_cont_conc,
+                                               target_year=args.target_year)
         print('* Saving {}'.format(filename), end=' ')
         pd.DataFrame(data=pos_id, columns=['PTNT_ID']).to_csv(filename, index=False)
         print(u'\u2713')
@@ -155,7 +155,7 @@ def main():
     filename = args.output+'_class_0.csv'
     if not os.path.exists(filename):
         print('* Looking for the negative samples ...')  # progress bar embedded
-        neg_id = utils.find_negative_samples(pbs_files_fullpath, dd, cons_cont_conc)
+        neg_id = d_utils.find_negative_samples(pbs_files_fullpath, dd, cons_cont_conc)
         print('* Saving {}'.format(filename), end=' ')
         pd.DataFrame(data=neg_id, columns=['PTNT_ID']).to_csv(filename, index=False)
         print(u'\u2713')
@@ -163,11 +163,10 @@ def main():
         neg_id = pd.read_csv(filename, header=0).values.ravel()
     print('* I found {} negative samples'.format(len(neg_id)))
 
-
-
-
-
-
+    # Sanity check: no samples should be in common between positive and negative class
+    assert(len(set(pos_id).intersection(set(neg_id))) == 0)
+    print('* Negative and positive class do not overlap', end=' ')
+    print(u'\u2713')
 
 
 ################################################################################

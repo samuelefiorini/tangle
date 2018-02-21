@@ -3,17 +3,21 @@
 These scripts are meant to extract relevant information from the raw MBS-PBS 10% dataset.
 To run these scripts you are supposed to have to have organized the MBS-PBS 10% dataset in a folder (*e.g.:* `../../../data`).
 
-## Usage and details
+Python 2.7 needed.
 
+## Usage and details
 
 Usage example:
 
-`$ make_xy.py --root <ROOT> --target_year <YYYY> --output <FILENAME> --filter_copayments --monthly_breakdown`
+`$ labels_assignment.py --root <ROOT> --skip_input_check --output <PATH> --target_year <YYYY> --chunk_size <CCC> --n_jobs <NNN>`
 
-or, equivalently
+or, equivalently:
 
-`$ make_xy.py -r <ROOT> -t <YYYY> -o <FILENAME> -fc -mb`
+`$ labels_assignment.py -r <ROOT> -s -o <PATH> -t <YYYY> -cs <CCC> -nj <NNN>`
 
-This script aims at creating a supervised dataset `D = (X, y)` where `y = 1` for individuals that *started* to take
-gliceamia-controlling drugs in the year `<YYYY>`, while `y = 0` for individuals that were never prescribed with
-diabetes controlling drugs in the years [2008, 2014].
+This script aims at finding the patient identifiers of the positive and negative
+classes, where:
++ positive class (`y = 1`): subjects that continuously and consistently use
+  their concessional card in the observation years to buy diabetes drugs,
+- negative class (`y = 0`): subjects that continuously and consistently use
+  their concessional card but were never prescribed to diabetes control drugs.
