@@ -36,7 +36,7 @@ def parse_arguments():
     parser.add_argument('-o', '--output', type=str,
                         help='Ouput file name root.',
                         default=None)
-    parser.add_argument('-s', '--skip_input_check', action='store_false',
+    parser.add_argument('-sic', '--skip_input_check', action='store_false',
                         help='Skip the input check (default=False).')
     parser.add_argument('-nj', '--n_jobs', type=int,
                         help='The number of processes to use.', default=4)
