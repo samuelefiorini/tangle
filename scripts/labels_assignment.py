@@ -70,16 +70,16 @@ def init_main():
 def main():
     """Main find_concessionas.py routine."""
     args = init_main()
-    print('-----------------------------------------------------')
+    print('-------------------------------------------------------------------')
     print('MBS - PBS 10% dataset utility: find_concessionals.py')
-    print('-----------------------------------------------------')
+    print('-------------------------------------------------------------------')
 
     print('* Root data folder: {}'.format(args.root))
     print('* Target year: {}'.format(args.target_year))
     print('* Output files: {}.[pkl, csv, ...]'.format(args.output))
     print('* Number of jobs: {}'.format(args.n_jobs))
     print('* Chunk size: {}'.format(args.chunk_size))
-    print('-----------------------------------------------------')
+    print('-------------------------------------------------------------------')
 
     # PBS 10% dataset files
     pbs_files = filter(lambda x: x.startswith('PBS'), os.listdir(args.root))
@@ -111,8 +111,15 @@ def main():
     print('* {} Subjects consistently use concessional cards'.format(len(cons_conc)))
 
     # Intersect the two sets and get the consistently and continuous
-    # concessional cards users (no need to pickle, this is fast)
-    cons_cont_conc = cons_conc.intersection(cont_conc)
+    # concessional cards users
+    filename = args.output+'_cc_.pkl'
+    if not os.path.exists(filename):
+        cons_cont_conc = cons_conc.intersection(cont_conc)
+        print('* Saving {} '.format(filename), end=' ')
+        pkl.dump(cons_cont_conc, open(filename, 'wb'))
+        print(u'\u2713')
+    else:
+        cons_cont_conc = pkl.load(open(filename, 'rb'))
     print('* {} Subjects consistently AND continuously '
           'use concessional cards'.format(len(cons_cont_conc)))
 

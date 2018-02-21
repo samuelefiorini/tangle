@@ -76,8 +76,8 @@ def find_negative_samples(pbs_files, dd, cc):
     negative_subjects = set()
 
     diabetic_overall = set()
-    for year in np.arange(2008, 2014): # FIXME as soon as you get all PBS files
-        diabetic_overall |= set(dd['PBS_SAMPLE_10PCT_'+str(year)+'.csv'])
+    for pbs in pbs_files:  # get all the patients using diabetes drugs
+        diabetic_overall |= set(dd[os.path.split(pbs)[-1]])
     diabetic_overall = diabetic_overall.intersection(cc)   # keep only the concessionals
 
     for pbs in tqdm(pbs_files): # TODO maybe use multiprocessing here
