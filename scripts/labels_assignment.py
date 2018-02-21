@@ -69,10 +69,10 @@ def init_main():
 
 def main():
     """Main find_concessionas.py routine."""
-    args = init_main()
     print('-------------------------------------------------------------------')
     print('MBS - PBS 10% dataset utility: find_concessionals.py')
     print('-------------------------------------------------------------------')
+    args = init_main()
 
     print('* Root data folder: {}'.format(args.root))
     print('* Target year: {}'.format(args.target_year))
@@ -126,7 +126,7 @@ def main():
     # Find people on diabetic drugs
     filename = args.output+'_dd_.pkl'
     if not os.path.exists(filename):
-        print('* Looking for people on diabete control drugs ...')  # progress bar embedded
+        print('* Looking for subjects on diabete control drugs ...')  # progress bar embedded
         dd = d_utils.find_diabetics(pbs_files_fullpath,
                                     filter_copayments=False,
                                     monthly_breakdown=False,

@@ -9,7 +9,8 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-__C0C1_THRESH__ = 0.5
+# __C0C1_THRESH__ = 0.5
+__C0C1_THRESH__ = 0.99
 
 
 def flatten(x):
@@ -51,7 +52,7 @@ def find_continuously_concessionals(pbs_files):
     c0c1_counts = pd.DataFrame.from_dict(Counter(c0c1), orient='index').rename({0: 'COUNTS'}, axis=1)
     # return only the subjects that use concessional cards for at least
     # 50% of the years of observation
-    idx = c0c1_counts[c0c1_counts['COUNTS'] >= __C0C1_THRESH__*len(pbs_files)].index.tolist()
+    idx = c0c1_counts[c0c1_counts['COUNTS'] > __C0C1_THRESH__*len(pbs_files)].index.tolist()
     return set(idx)
 
 

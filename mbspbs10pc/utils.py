@@ -35,7 +35,7 @@ def check_input(root):
             warnings.warn('File {} not found'.format(pbs))
             pbs_files_set.remove(pbs)
 
-    print('Found:\n- {} MBS files\n- {} PBS files'.format(len(mbs_files_set), len(pbs_files_set)))
+    print('* Found:\n   + {} MBS files\n   + {} PBS files'.format(len(mbs_files_set), len(pbs_files_set)))
 
     # Check for the SAMPLE_PIN_LOOKUP.csv file (not mandatory)
     if not os.path.exists(sample_pin_lookout):
