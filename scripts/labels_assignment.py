@@ -70,7 +70,7 @@ def init_main():
 def main():
     """Main find_concessionas.py routine."""
     print('-------------------------------------------------------------------')
-    print('MBS - PBS 10% dataset utility: find_concessionals.py')
+    print('MBS - PBS 10% dataset utility: labels_assignment.py')
     print('-------------------------------------------------------------------')
     args = init_main()
 
