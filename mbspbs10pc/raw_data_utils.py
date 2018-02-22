@@ -44,11 +44,10 @@ def get_raw_data(mbs_files, sample_pin_lookout, source):
     dfs = pd.read_csv(source, header=0)
 
     # Step 1: get sex and age
-    df_pin_lookout = pd.read_csv(sample_pin_lookout, header=0, index_col=0)
-    print(df_pin_lookout.head())
-    current_year = datetime.datetime.now().year
+    df_pin_lookout = pd.read_csv(sample_pin_lookout, header=0)
+    df_pin_lookout['AGE'] = datetime.datetime.now().year - df_pin_lookout['YOB']
+
+    dfs = pd.merge(dfs, df_pin_lookout, how='left', left_on='PTNT_ID', right_on='PIN')[['PIN', 'SEX', 'AGE']]
 
 
-    print(dfs.head())
-
-    return dict()
+    return raw_data
