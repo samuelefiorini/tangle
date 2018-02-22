@@ -42,8 +42,8 @@ def parse_arguments():
                         default=None)
     parser.add_argument('-sic', '--skip_input_check', action='store_false',
                         help='Skip the input check (default=False).')
-    # parser.add_argument('-nj', '--n_jobs', type=int,
-    #                     help='The number of processes to use.', default=4)
+    parser.add_argument('-nj', '--n_jobs', type=int,
+                        help='The number of processes to use.', default=4)
     # parser.add_argument('-cs', '--chunk_size', type=int,
     #                     help='The numer of rows each process has access to.',
     #                     default=1000)
@@ -80,7 +80,7 @@ def main():
     print('* Root data folder: {}'.format(args.root))
     print('* PTNT_ID list: {}'.format(args.source))
     print('* Output files: {}.[pkl, csv, ...]'.format(args.output))
-    # print('* Number of jobs: {}'.format(args.n_jobs))
+    print('* Number of jobs: {}'.format(args.n_jobs))
     # print('* Chunk size: {}'.format(args.chunk_size))
     print('-------------------------------------------------------------------')
 
@@ -95,7 +95,8 @@ def main():
     # if not os.path.exists(filename):
     raw_data = utils.get_raw_data(mbs_files_fullpath,
                                   os.path.join(args.root, sample_pin_lookout),
-                                  args.source)
+                                  args.source,
+                                  n_jobs=args.n_jobs)
     print('* Saving {} '.format(filename), end=' ')
     pkl.dump(raw_data, open(filename, 'wb'))
     print(u'\u2713')
