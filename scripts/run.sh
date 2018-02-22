@@ -10,4 +10,4 @@
 # python scripts/labels_assignment.py -r ../../data -o tmp/dump -cs 50000 -nj 32 -t 2014
 
 # --- Extract sequences --- #
-clear; python scripts/extract_sequences.py -r ../../data -s tmp/dump_class_0.csv # Negative examples
+clear; python scripts/extract_sequences.py -sic -r ../../data -s tmp/dump_class_0.csv # Negative examples

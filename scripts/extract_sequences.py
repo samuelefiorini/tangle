@@ -1,14 +1,17 @@
 #!/usr/bin/env python
-"""Extract raw sequences from the MBS files.
+"""Extract raw data from the MBS files.
 
 Given a list of PTNT_ID, this script aims at extracting a sequence of MBS
 services usage of each individual. A possible list may be something like:
 
     123: ['82', 15, '6', 7, '82']
 
-where '82' and '6' are the SPR_RSP code for 'C/Physician – General Medicine' and
+where '82' and '6' are the SPR_RSP code for 'C/Physician - General Medicine' and
 'Endocrinology', respectively. While 15 and 7 are the timespan (in days) between
 the two examinations (see data/spr_rsp_label.csv).
+
+Remarks:
+- PTNT_ID in PBS is referred to as PIN in MBS.
 """
 
 from __future__ import print_function
@@ -18,6 +21,7 @@ import cPickle as pkl
 import os
 from datetime import datetime
 
+import mbspbs10pc.raw_data_utils as utils
 import pandas as pd
 from mbspbs10pc.utils import check_input
 
@@ -61,7 +65,7 @@ def init_main():
 
     # Check output filename
     if args.output is None:
-        args.output = 'DumpFile'+str(datetime.now())
+        args.output = args.source[:-4]+'_'
 
     return args
 
@@ -79,6 +83,22 @@ def main():
     # print('* Number of jobs: {}'.format(args.n_jobs))
     # print('* Chunk size: {}'.format(args.chunk_size))
     print('-------------------------------------------------------------------')
+
+    # MBS 10% dataset files
+    mbs_files = filter(lambda x: x.startswith('MBS'), os.listdir(args.root))
+    mbs_files_fullpath = [os.path.join(args.root, mbs) for mbs in mbs_files]
+    sample_pin_lookout = filter(lambda x: x.startswith('SAMPLE'),
+                                os.listdir(args.root))[0]
+
+    # Get the features
+    filename = args.output+'_raw_data_.pkl'
+    # if not os.path.exists(filename):
+    raw_data = utils.get_raw_data(mbs_files_fullpath,
+                                  os.path.join(args.root, sample_pin_lookout),
+                                  args.source)
+    print('* Saving {} '.format(filename), end=' ')
+    pkl.dump(raw_data, open(filename, 'wb'))
+    print(u'\u2713')
 
 
 
