@@ -19,10 +19,8 @@ from __future__ import print_function
 import argparse
 import cPickle as pkl
 import os
-from datetime import datetime
 
 import mbspbs10pc.raw_data_utils as utils
-import pandas as pd
 from mbspbs10pc.utils import check_input
 
 
