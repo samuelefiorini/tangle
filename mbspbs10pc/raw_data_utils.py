@@ -1,24 +1,77 @@
 """This module keeps the functions for sequences extraction from MBS files."""
 from __future__ import print_function
 
-import calendar
 import datetime
 import multiprocessing as mp
+from multiprocessing.pool import ThreadPool
 import os
+import warnings
 from multiprocessing import Manager
 
 import numpy as np
 import pandas as pd
-from sklearn.datasets.base import Bunch
+from mbspbs10pc.concessionals_utils import flatten
+from pandas.core.common import SettingWithCopyWarning
 from tqdm import tqdm
 
 ___MBS_FILES_DICT__ = dict()
 
 
-def worker(pins, raw_data):
+def worker(i, split, raw_data):
     """Patient tracking worker."""
-    for pin in pins:
-        raw_data[pin] = len(___MBS_FILES_DICT__)
+    mbs_dd = ___MBS_FILES_DICT__  # nice nickname for the ugly global variable
+
+    with warnings.catch_warnings():  # ignore SettingWithCopyWarning
+        warnings.simplefilter(action='ignore', category=SettingWithCopyWarning)
+
+        # First progress
+        progress = tqdm(
+            total=len(mbs_dd.keys()),
+            position=i,
+            desc="[job {}] Pre-filtering".format(i),
+        )
+
+        # Pre-filter: keep only the elements of mbs_dd that are in the current split
+        # this helps in reducing the time of the next step
+        small_mbs_dd = dict()
+        # for k in tqdm(sorted(mbs_dd.keys()), desc='[job {}] Pre-filtering'.format(i)):
+        for k in sorted(mbs_dd.keys()):
+            progress.update(1)
+            # keep only a subset of the full MBS data
+            small_mbs_dd[k] = mbs_dd[k].loc[mbs_dd[k]['PIN'].isin(split)]
+            # change format to the right datetime format (this is gonna be useful later)
+            small_mbs_dd[k].loc[:, 'DOS'] = pd.to_datetime(small_mbs_dd[k]['DOS'], format='%d%b%Y')
+            # and sort by date
+            small_mbs_dd[k].sort_values(by='DOS', inplace=True)
+        progress.close()
+
+        # Second progress
+        progress = tqdm(
+            total=len(split),
+            position=i,
+            desc="[job {}] Sequence extraction".format(i),
+        )
+
+        # Now track down each patient in the reduced MBS files
+        # for s in tqdm(split, desc='[job {}] Sequence extraction'.format(i)):
+        for s in split:
+            progress.update(1)
+            tmp = pd.DataFrame(columns=['PIN', 'DOS', 'SPR_RSP'])
+            for k in sorted(mbs_dd.keys()):
+                tmp = pd.concat((tmp, small_mbs_dd[k].loc[small_mbs_dd[k]['PIN'] == s]))
+
+            if len(tmp['SPR_RSP'].values) > 0:
+                # evaluate the first order difference and convert each entry in days
+                timedeltas = map(lambda x: pd.Timedelta(x).days,
+                                 tmp['DOS'].values[1:] - tmp['DOS'].values[:-1])
+                # then build the sequence as ['exam', idle-days, 'exam', idle-days, ...]
+                raw_data[s] = flatten([[spr_rsp, dt] for spr_rsp, dt in zip(tmp['SPR_RSP'].values, timedeltas)])
+                raw_data[s].append(tmp['SPR_RSP'].values[-1])
+            else:
+                raw_data[s] = list()
+        progress.close()
+
+        # del small_mbs_dd, tmp  # explicitly call GC to save some RAM
 
 
 def get_raw_data(mbs_files, sample_pin_lookout, source, n_jobs=4):
@@ -46,9 +99,11 @@ def get_raw_data(mbs_files, sample_pin_lookout, source, n_jobs=4):
     Returns:
     --------------
     raw_data: dictionary
-        A dictionary that stores raw unstructured sequences and additional info
-        of each input subject. Each value in the dictionary is a
-        `sklearn.datasets.base.Bunch` object.
+        A dictionary that stores raw unstructured sequences of each input
+        subject and additional info.
+
+    extra_info: pandas.DataFrame
+        Extra info of the input patients, such as age and sex.
     """
     raw_data = dict()
 
@@ -63,25 +118,24 @@ def get_raw_data(mbs_files, sample_pin_lookout, source, n_jobs=4):
     # Step 2: follow each patient in the mbs files
     # at first create a very large dictionary with all the MBS files
     # (keeping only the relevant columns)
-    print('* Loading the MBS files ...')
     global ___MBS_FILES_DICT__
-    for mbs in tqdm(mbs_files):
+    for mbs in tqdm(mbs_files, desc='MBS files loading'):
         ___MBS_FILES_DICT__[mbs] = pd.read_csv(mbs, header=0,
                                                usecols=['PIN', 'SPR_RSP', 'DOS'])
-    print('* {} MBS files loaded'.format(len(___MBS_FILES_DICT__)))
 
     # This large dictionary is shared across multiple processes
     manager = Manager()
     shared_raw_data = manager.dict(raw_data)
+    # pool = ThreadPool(n_jobs)
     pool = mp.Pool(n_jobs)
 
     # Split the PINs in n_jobs approximately equal chunks
     splits = np.array_split(dfs['PIN'].values, n_jobs)
 
     # Submit the patient tracking jobs
-    results = [pool.apply_async(worker, (split, shared_raw_data)) for split in splits]
+    results = [pool.apply_async(worker, (i, split, shared_raw_data)) for i, split in enumerate(splits)]
 
     # And collect the results
     results = [p.get() for p in results]
 
-    return dict(shared_raw_data)
+    return dict(shared_raw_data), dfs

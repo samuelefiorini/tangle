@@ -93,13 +93,15 @@ def main():
     # Get the features
     filename = args.output+'_raw_data_.pkl'
     # if not os.path.exists(filename):
-    raw_data = utils.get_raw_data(mbs_files_fullpath,
-                                  os.path.join(args.root, sample_pin_lookout),
-                                  args.source,
-                                  n_jobs=args.n_jobs)
+    raw_data, extra_info = utils.get_raw_data(mbs_files_fullpath,
+                                              os.path.join(args.root,
+                                                           sample_pin_lookout),
+                                              args.source,
+                                              n_jobs=args.n_jobs)
     print('* Saving {} '.format(filename), end=' ')
-    pkl.dump(raw_data, open(filename, 'wb'))
+    pkl.dump({'raw_data': raw_data, 'extra_info': extra_info}, open(filename, 'wb'))
     print(u'\u2713')
+
 
 
 
