@@ -64,8 +64,10 @@ def worker(i, split, raw_data):
                 timedeltas = map(lambda x: pd.Timedelta(x).days,
                                  tmp['DOS'].values[1:] - tmp['DOS'].values[:-1])
                 # then build the sequence as ['exam', idle-days, 'exam', idle-days, ...]
-                raw_data[s] = flatten([[btos, dt] for btos, dt in zip(tmp['BTOS'].values, timedeltas)])
-                raw_data[s].append(tmp['BTOS'].values[-1])
+                seq = flatten([[btos, dt] for btos, dt in zip(tmp['BTOS'].values, timedeltas)])
+                seq.append(tmp['BTOS'].values[-1])
+                seq = map(np.int16, seq)  # save space in RAM
+                raw_data[s] = seq
             else:
                 raw_data[s] = list()
         progress.close()
