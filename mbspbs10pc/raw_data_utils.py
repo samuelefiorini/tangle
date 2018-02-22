@@ -3,7 +3,6 @@ from __future__ import print_function
 
 import datetime
 import multiprocessing as mp
-from multiprocessing.pool import ThreadPool
 import os
 import warnings
 from multiprocessing import Manager
@@ -71,8 +70,6 @@ def worker(i, split, raw_data):
                 raw_data[s] = list()
         progress.close()
 
-        # del small_mbs_dd, tmp  # explicitly call GC to save some RAM
-
 
 def get_raw_data(mbs_files, sample_pin_lookout, source, n_jobs=4):
     """Extract the sequences and find the additional features.
@@ -126,7 +123,6 @@ def get_raw_data(mbs_files, sample_pin_lookout, source, n_jobs=4):
     # This large dictionary is shared across multiple processes
     manager = Manager()
     shared_raw_data = manager.dict(raw_data)
-    # pool = ThreadPool(n_jobs)
     pool = mp.Pool(n_jobs)
 
     # Split the PINs in n_jobs approximately equal chunks
@@ -137,5 +133,11 @@ def get_raw_data(mbs_files, sample_pin_lookout, source, n_jobs=4):
 
     # And collect the results
     results = [p.get() for p in results]
+
+    # Clear screen
+    if os.name == 'posix':
+        os.system('clear')
+    else:
+        os.system('cls')
 
     return dict(shared_raw_data), dfs

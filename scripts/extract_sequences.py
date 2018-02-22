@@ -4,11 +4,12 @@
 Given a list of PTNT_ID, this script aims at extracting a sequence of MBS
 services usage of each individual. A possible list may be something like:
 
-    123: ['82', 15, '6', 7, '82']
+    123: [82, 15, 6, 7, 82]
 
-where '82' and '6' are the SPR_RSP code for 'C/Physician - General Medicine' and
+where 82 and 6 are the SPR_RSP code for 'C/Physician - General Medicine' and
 'Endocrinology', respectively. While 15 and 7 are the timespan (in days) between
-the two examinations (see data/spr_rsp_label.csv).
+the two examinations (see data/spr_rsp_label.csv). So, MBS provider in even
+position and days in odd positions.
 
 Remarks:
 - PTNT_ID in PBS is referred to as PIN in MBS.
@@ -92,17 +93,15 @@ def main():
 
     # Get the features
     filename = args.output+'_raw_data_.pkl'
-    # if not os.path.exists(filename):
-    raw_data, extra_info = utils.get_raw_data(mbs_files_fullpath,
-                                              os.path.join(args.root,
-                                                           sample_pin_lookout),
-                                              args.source,
-                                              n_jobs=args.n_jobs)
-    print('* Saving {} '.format(filename), end=' ')
-    pkl.dump({'raw_data': raw_data, 'extra_info': extra_info}, open(filename, 'wb'))
-    print(u'\u2713')
-
-
+    if not os.path.exists(filename):
+        raw_data, extra_info = utils.get_raw_data(mbs_files_fullpath,
+                                                  os.path.join(args.root,
+                                                               sample_pin_lookout),
+                                                  args.source,
+                                                  n_jobs=args.n_jobs)
+        print('* Saving {} '.format(filename), end=' ')
+        pkl.dump({'raw_data': raw_data, 'extra_info': extra_info}, open(filename, 'wb'))
+        print(u'\u2713')
 
 
 ################################################################################
