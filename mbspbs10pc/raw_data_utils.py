@@ -55,17 +55,17 @@ def worker(i, split, raw_data):
         # for s in tqdm(split, desc='[job {}] Sequence extraction'.format(i)):
         for s in split:
             progress.update(1)
-            tmp = pd.DataFrame(columns=['PIN', 'DOS', 'SPR_RSP'])
+            tmp = pd.DataFrame(columns=['PIN', 'DOS', 'BTOS'])
             for k in sorted(mbs_dd.keys()):
                 tmp = pd.concat((tmp, small_mbs_dd[k].loc[small_mbs_dd[k]['PIN'] == s]))
 
-            if len(tmp['SPR_RSP'].values) > 0:
+            if len(tmp['BTOS'].values) > 0:
                 # evaluate the first order difference and convert each entry in days
                 timedeltas = map(lambda x: pd.Timedelta(x).days,
                                  tmp['DOS'].values[1:] - tmp['DOS'].values[:-1])
                 # then build the sequence as ['exam', idle-days, 'exam', idle-days, ...]
-                raw_data[s] = flatten([[spr_rsp, dt] for spr_rsp, dt in zip(tmp['SPR_RSP'].values, timedeltas)])
-                raw_data[s].append(tmp['SPR_RSP'].values[-1])
+                raw_data[s] = flatten([[btos, dt] for btos, dt in zip(tmp['BTOS'].values, timedeltas)])
+                raw_data[s].append(tmp['BTOS'].values[-1])
             else:
                 raw_data[s] = list()
         progress.close()
@@ -104,8 +104,10 @@ def get_raw_data(mbs_files, sample_pin_lookout, source, n_jobs=4):
     """
     raw_data = dict()
 
-    # Step 0: load the source file
+    # Step 0: load the source file and the imap file
     dfs = pd.read_csv(source, header=0)
+    imap = pd.read_csv(os.path.join('data', 'imap.tsv'), sep='\t', header=0,
+                       usecols=['ITEM', 'BTOS'])
 
     # Step 1: get sex and age
     df_pin_lookout = pd.read_csv(sample_pin_lookout, header=0)
@@ -117,8 +119,8 @@ def get_raw_data(mbs_files, sample_pin_lookout, source, n_jobs=4):
     # (keeping only the relevant columns)
     global ___MBS_FILES_DICT__
     for mbs in tqdm(mbs_files, desc='MBS files loading'):
-        ___MBS_FILES_DICT__[mbs] = pd.read_csv(mbs, header=0,
-                                               usecols=['PIN', 'SPR_RSP', 'DOS'])
+        dd = pd.read_csv(mbs, header=0, usecols=['PIN', 'ITEM', 'DOS'])
+        ___MBS_FILES_DICT__[mbs] = pd.merge(dd, imap, how='left', on='ITEM')
 
     # This large dictionary is shared across multiple processes
     manager = Manager()
