@@ -8,6 +8,7 @@ from multiprocessing import Manager
 
 import numpy as np
 import pandas as pd
+from mbspbs10pc import __path__ as home
 from tqdm import tqdm
 
 
@@ -127,7 +128,7 @@ def find_diabetics(pbs_files, filter_copayments=True, monthly_breakdown=False,
         E.g.: `{'PBS_SAMPLE_10PCT_2012.csv': [3928691704, 5156241855,...]}`
     """
     # Load the drugs used in diabetes list file
-    _dd = pd.read_csv(os.path.join('data', 'drugs_used_in_diabetes.csv'), header=0)
+    _dd = pd.read_csv(os.path.join(home[0], 'data', 'drugs_used_in_diabetes.csv'), header=0)
 
     # Fix 6-digit notation
     dd = set()  # dd should be a set for performance reasons
@@ -139,7 +140,7 @@ def find_diabetics(pbs_files, filter_copayments=True, monthly_breakdown=False,
 
     # Load the Co-payments thresholds
     if filter_copayments:
-        co_payments = pd.read_csv(os.path.join('data', 'co-payments_08-18.csv'),
+        co_payments = pd.read_csv(os.path.join(home[0], 'data', 'co-payments_08-18.csv'),
                                   header=0, index_col=0, usecols=['DOC', 'GBC'])
 
     # Itereate on the pbs files and get the index of the individuals that

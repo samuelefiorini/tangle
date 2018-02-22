@@ -9,6 +9,7 @@ from multiprocessing import Manager
 
 import numpy as np
 import pandas as pd
+from mbspbs10pc import __path__ as home
 from mbspbs10pc.concessionals_utils import flatten
 from pandas.core.common import SettingWithCopyWarning
 from tqdm import tqdm
@@ -108,7 +109,7 @@ def get_raw_data(mbs_files, sample_pin_lookout, source, n_jobs=4):
 
     # Step 0: load the source file and the imap file
     dfs = pd.read_csv(source, header=0)
-    imap = pd.read_csv(os.path.join('data', 'imap.tsv'), sep='\t', header=0,
+    imap = pd.read_csv(os.path.join(home[0], 'data', 'imap.tsv'), sep='\t', header=0,
                        usecols=['ITEM', 'BTOS'])
 
     # Step 1: get sex and age
