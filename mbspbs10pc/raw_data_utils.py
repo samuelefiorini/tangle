@@ -19,14 +19,12 @@ ___MBS_FILES_DICT__ = dict()
 
 def worker(i, split, raw_data):
     """Patient tracking worker."""
-    mbs_dd = ___MBS_FILES_DICT__  # nice nickname for the ugly global variable
-
     with warnings.catch_warnings():  # ignore SettingWithCopyWarning
         warnings.simplefilter(action='ignore', category=SettingWithCopyWarning)
 
         # First progress
         progress = tqdm(
-            total=len(mbs_dd.keys()),
+            total=len(___MBS_FILES_DICT__.keys()),
             position=i,
             desc="[job {}] Pre-filtering".format(i),
         )
@@ -35,10 +33,10 @@ def worker(i, split, raw_data):
         # this helps in reducing the time of the next step
         small_mbs_dd = dict()
         # for k in tqdm(sorted(mbs_dd.keys()), desc='[job {}] Pre-filtering'.format(i)):
-        for k in sorted(mbs_dd.keys()):
+        for k in sorted(___MBS_FILES_DICT__.keys()):
             progress.update(1)
             # keep only a subset of the full MBS data
-            small_mbs_dd[k] = mbs_dd[k].loc[mbs_dd[k]['PIN'].isin(split)]
+            small_mbs_dd[k] = ___MBS_FILES_DICT__[k].loc[___MBS_FILES_DICT__[k]['PIN'].isin(split)]
             # change format to the right datetime format (this is gonna be useful later)
             small_mbs_dd[k].loc[:, 'DOS'] = pd.to_datetime(small_mbs_dd[k]['DOS'], format='%d%b%Y')
             # and sort by date
@@ -57,7 +55,7 @@ def worker(i, split, raw_data):
         for s in split:
             progress.update(1)
             tmp = pd.DataFrame(columns=['PIN', 'DOS', 'BTOS'])
-            for k in sorted(mbs_dd.keys()):
+            for k in sorted(___MBS_FILES_DICT__.keys()):
                 tmp = pd.concat((tmp, small_mbs_dd[k].loc[small_mbs_dd[k]['PIN'] == s]))
 
             if len(tmp['BTOS'].values) > 0:
