@@ -1,5 +1,5 @@
 """This module keeps the functions for sequences extraction from MBS files."""
-from __future__ import print_function
+from __future__ import division, print_function
 
 import datetime
 import multiprocessing as mp
@@ -59,8 +59,8 @@ def worker(i, split, raw_data):
                 tmp = pd.concat((tmp, small_mbs_dd[k].loc[small_mbs_dd[k]['PIN'] == s]))
 
             if len(tmp['BTOS'].values) > 0:
-                # evaluate the first order difference and convert each entry in weeks
-                timedeltas = map(lambda x: pd.Timedelta(x).weeks,
+                # evaluate the first order difference and convert each entry in WEEKS
+                timedeltas = map(lambda x: pd.Timedelta(x).days//7,
                                  tmp['DOS'].values[1:] - tmp['DOS'].values[:-1])
                 # then build the sequence as ['exam', idle-days, 'exam', idle-days, ...]
                 seq = flatten([[btos, dt] for btos, dt in zip(tmp['BTOS'].values, timedeltas)])
