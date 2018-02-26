@@ -1,1 +1,17 @@
-﻿BTOS (Heirarchy order),BTOS,BTOS NAME101,A,Non-referred attendances GP/VR GP102,M,Non-referred attendances - Enhanced Primary Care103,B,Non-referred attendances - Other110,O,Non-referred attendances - Practice Nurse Items150,P,Other Allied Health200,C,Specialist attendances300,D,Obstetrics400,E,Anaesthetics501,N,Pathology Collection Items502,F,Pathology Tests600,G,Diagnostic Imaging700,H,Operations800,I,Assistance at Operations900,J,Optometry1000,K,Radiotherapy and Therapeutic Nuclear Medicine1100,L,Other MBS services
+BTOS (Heirarchy order),BTOS,BTOS NAME,BTOS-4D
+101,A,Non-referred attendances GP/VR GP,GP
+102,M,Non-referred attendances - Enhanced Primary Care,GP
+103,B,Non-referred attendances - Other,GP
+110,O,Non-referred attendances - Practice Nurse Items,GP
+150,P,Other Allied Health,Other Allied Health
+200,C,Specialist attendances,Specialist attendances
+300,D,Obstetrics,Obstetrics
+400,E,Anaesthetics,Surgery
+501,N,Pathology Collection Items,Pathology
+502,F,Pathology Tests,Pathology
+600,G,Diagnostic Imaging,Diagnostic
+700,H,Operations,Surgery
+800,I,Assistance at Operations,Surgery
+900,J,Optometry,Optometry
+1000,K,Radiotherapy and Therapeutic Nuclear Medicine,Therapeutic
+1100,L,Other MBS services,Therapeutic
