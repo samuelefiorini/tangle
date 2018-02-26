@@ -83,6 +83,8 @@ def main():
     print('* Output files: {}.[pkl, csv, ...]'.format(args.output))
     print('* Number of jobs: {}'.format(args.n_jobs))
     # print('* Chunk size: {}'.format(args.chunk_size))
+
+    print('[{}] Exclude pregnancy: {}'.format(*('+', 'ON') if args.exclude_pregnancy else (' ', 'OFF')))
     print('-------------------------------------------------------------------')
 
     # MBS 10% dataset files
@@ -97,7 +99,8 @@ def main():
         raw_data, extra_info = utils.get_raw_data(mbs_files_fullpath,
                                                   os.path.join(args.root,
                                                                sample_pin_lookout),
-                                                  args.source,
+                                                  exclude_pregnancy=args.exclude_pregnancy,
+                                                  source=args.source,
                                                   n_jobs=args.n_jobs)
         print('* Saving {} '.format(filename), end=' ')
         pkl.dump({'raw_data': raw_data, 'extra_info': extra_info}, open(filename, 'wb'))
