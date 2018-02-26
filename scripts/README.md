@@ -14,7 +14,7 @@ Usage example:
 
 or, equivalently:
 
-`$ labels_assignment.py -r <ROOT> -s -o <PATH> -t <YYYY> -cs <CCC> -nj <NNN>`
+`$ labels_assignment.py -r <ROOT> -sic -o <PATH> -t <YYYY> -cs <CCC> -nj <NNN>`
 
 This script aims at finding the patient identifiers of the positive and negative
 classes, where:
@@ -27,12 +27,12 @@ classes, where:
 
 Usage example:
 
-`$ extract_sequences.py -root <ROOT> -skip_input_check --source <PATH> -n_jobs <NNN>`
+`$ extract_sequences.py -root <ROOT> --skip_input_check --exclude_pregnancy --source <PATH> -n_jobs <NNN>`
 
 or, equivalently:
 
-`$ extract_sequences.py -r <ROOT> -sic -s <PATH> -nj <NNN>`
+`$ extract_sequences.py -r <ROOT> -sic -ep -s <PATH> -nj <NNN>`
 
 This script extracts the raw BTOS sequences from the MBS files. An example of
-BTOS sequence is [101, 5, 102, 10, 103, ...] where odd entries are BTOS codes
+BTOS sequence is `A12G4A0A0G1...` where odd entries are BTOS codes
 and even entries are days between each visit.
