@@ -59,13 +59,14 @@ def worker(i, split, raw_data):
                 tmp = pd.concat((tmp, small_mbs_dd[k].loc[small_mbs_dd[k]['PIN'] == s]))
 
             if len(tmp['BTOS'].values) > 0:
-                # evaluate the first order difference and convert each entry in days
-                timedeltas = map(lambda x: pd.Timedelta(x).days,
+                # evaluate the first order difference and convert each entry in weeks
+                timedeltas = map(lambda x: pd.Timedelta(x).weeks,
                                  tmp['DOS'].values[1:] - tmp['DOS'].values[:-1])
                 # then build the sequence as ['exam', idle-days, 'exam', idle-days, ...]
                 seq = flatten([[btos, dt] for btos, dt in zip(tmp['BTOS'].values, timedeltas)])
                 seq.append(tmp['BTOS'].values[-1])
-                seq = map(np.int16, seq)  # save space in RAM
+                # and finally collapse everything down to a string like 'A5M8A...'
+                seq = ''.join(map(str, seq))
                 raw_data[s] = seq
             else:
                 raw_data[s] = list()
@@ -107,7 +108,7 @@ def get_raw_data(mbs_files, sample_pin_lookout, source, n_jobs=4):
 
     # Step 0: load the source file and the imap file
     dfs = pd.read_csv(source, header=0)
-    imap = pd.read_csv(os.path.join(home[0], 'data', 'imap.tsv'), sep='\t', header=0,
+    imap = pd.read_csv(os.path.join(home[0], 'data', 'imap_derived.csv'), header=0,
                        usecols=['ITEM', 'BTOS'])
 
     # Step 1: get sex and age
