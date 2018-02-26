@@ -32,7 +32,6 @@ def worker(i, split, raw_data):
         # Pre-filter: keep only the elements of mbs_dd that are in the current split
         # this helps in reducing the time of the next step
         small_mbs_dd = dict()
-        # for k in tqdm(sorted(mbs_dd.keys()), desc='[job {}] Pre-filtering'.format(i)):
         for k in sorted(___MBS_FILES_DICT__.keys()):
             progress.update(1)
             # keep only a subset of the full MBS data
@@ -41,6 +40,11 @@ def worker(i, split, raw_data):
             small_mbs_dd[k].loc[:, 'DOS'] = pd.to_datetime(small_mbs_dd[k]['DOS'], format='%d%b%Y')
             # and sort by date
             small_mbs_dd[k].sort_values(by='DOS', inplace=True)
+            # # retrieve the first diabetes-related examination and
+            # # exclude the following ones
+            # # TODO
+            # first_dd = np.where(small_mbs_dd[k]['ITEM'].isin(dd))[0][0]
+            # small_mbs_dd[k] = small_mbs_dd[k].iloc[:first_dd,:]
         progress.close()
 
         # Second progress
@@ -109,7 +113,7 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
     """
     raw_data = dict()
 
-    # Step 0: load the source file, the imap file
+    # Step 0: load the source file, the imap file and the diabetes drugs file
     dfs = pd.read_csv(source, header=0)
     imap = pd.read_csv(os.path.join(home[0], 'data', 'imap_derived.csv'), header=0,
                        usecols=['ITEM', 'BTOS'])
