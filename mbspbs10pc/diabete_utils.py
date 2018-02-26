@@ -32,20 +32,23 @@ def find_positive_samples(dd, cc, target_year=2012):
 
     Returns:
     --------------
-    positive_subjects: list
-        The list of target patient IDs (positive class).
+    positive_subjects: dict
+        Dictionary having target patient IDs (positive class) as keys and
+        SPPLY_DT as values.
     """
     # Init the postive subjects with the full list of people taking
     # diabetes drugs in the target year
-    positive_subjects = set(dd['PBS_SAMPLE_10PCT_'+str(target_year)+'.csv'])
+    positive_subjects = set(dd['PBS_SAMPLE_10PCT_'+str(target_year)+'.csv'].keys())
     positive_subjects = positive_subjects.intersection(cc)  # keep only the concessionals
 
     for year in np.arange(2008, target_year)[::-1]:
-        curr = set(dd['PBS_SAMPLE_10PCT_'+str(year)+'.csv'])
+        curr = set(dd['PBS_SAMPLE_10PCT_'+str(year)+'.csv'].keys())
         curr = curr.intersection(cc)  # keep only the concessionals
         positive_subjects = set(filter(lambda x: x not in curr, positive_subjects))
 
-    return list(positive_subjects)
+    positive_subjects = {k: dd['PBS_SAMPLE_10PCT_'+str(target_year)+'.csv'][k] for k in list(positive_subjects)}
+
+    return positive_subjects
 
 
 def find_negative_samples(pbs_files, dd, cc):
@@ -186,9 +189,10 @@ def find_diabetes_drugs_users(filename, dd, co_payment=None,
 
     Returns:
     --------------
-    index: list or dictionary
-        The list of unique patients identifiers that were prescribed to dibates
-        drugs in the input pbs file.
+    diabetes_drugs_users: dictionary
+        The dictionary of unique patients identifiers that were prescribed to
+        dibates drugs in the input pbs file. The dictionary has PTNT_ID as index
+        and SPPLY_DT as value.
     """
     manager = Manager()
     results = manager.dict()
@@ -208,14 +212,22 @@ def find_diabetes_drugs_users(filename, dd, co_payment=None,
     for f in jobs:
         f.get()
 
-    # Collapse the results in a single set
-    index = set()
+    # Collapse the results in a single dictionary
+    # having PTNT_ID as index and SPPLY_DT as value
+    # Progressbar
+    progress = tqdm(
+        total=len(results.keys()),
+        position=1,  # the next line is ugly, but it is just the year of the PBS
+        desc="Processing PBS {}".format(os.path.split(filename)[-1].split('_')[-1].split('.')[0]),
+    )
+    diabetes_drugs_users = dict()
     for k in results.keys():
-        content = results[k]['PTNT_ID']  # extrapolate the only relevant field
-        for item in content:  # FIXME find a way to avoid nested loops
-            index.add(item)
+        progress.update(1)
+        ptnt_ids = np.unique(results[k]['PTNT_ID'].values.ravel())
+        for ptnt_id in ptnt_ids:
+            diabetes_drugs_users[ptnt_id] = results[k][results[k]['PTNT_ID'] == ptnt_id]['SPPLY_DT']
 
-    return list(index)
+    return diabetes_drugs_users
 
 
 def process_chunk(i, chunk, results, dd, co_payment):
@@ -230,7 +242,7 @@ def process_chunk(i, chunk, results, dd, co_payment):
         idx = np.logical_and(chunk['PTNT_CNTRBTN_AMT']+chunk['BNFT_AMT'] >= co_payment,
                              chunk['ITM_CD'].isin(dd))
 
-    content = chunk.loc[idx][['PTNT_ID', 'SPPLY_DT']]
+    content = chunk.loc[idx, ['PTNT_ID', 'SPPLY_DT']]
 
     if content.shape[0] > 0:  # save only the relevant content
-        results[i] = content  # contenta has 'PTNT_ID' and 'SPPLY_DT'
+        results[i] = content  # so content has 'PTNT_ID' and 'SPPLY_DT'
