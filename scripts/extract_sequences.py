@@ -4,11 +4,46 @@
 Given a list of PTNT_ID, this script aims at extracting a sequence of MBS
 services usage of each individual. A possible list may be something like:
 
-    123: [101, 15, 102, 7, 103]
+    123: 'G0P1P0D2'
 
-where 101, 102 and 103 are different broad type of service BOTS (see data/imap.tsv).
-While 15 and 7 are the timespan (in days) between the two examinations.
+where G, P and D are different modified broad type of service BOTS-4D.
+While 0, 1, etc are the timespan between the two examinations.
 So, MBS provider in even position and days in odd positions.
+
+The encoding of the MBS items is reported in the column BTOS-4D, where 4D stads
+for "for diabetes" and it is a modified BTOS naming (see also
+data/btos_details.csv):
+-----------------------------------------------------------------------------------
+BTOS (Heirarchy order) | BTOS NAME	                                      | BTOS-4D
+-----------------------------------------------------------------------------------
+101	                   | Non-referred attendances GP/VR                   | G
+102	                   | Non-referred attendances - Enhanced Primary Care | G
+103	                   | Non-referred attendances - Other                 | G
+110	                   | Non-referred attendances - Practice Nurse Items  |	G
+150	                   | Other Allied Health                              |	H
+200	                   | Specialist attendances	Specialist attendances    |	E
+300	                   | Obstetrics	                                      |	B
+400	                   | Anaesthetics                                     |	S
+501	                   | Pathology Collection Items	                      | P
+502	                   | Pathology Tests                                  | P
+600	                   | Diagnostic Imaging	                              | D
+700	                   | Operations                                       | S
+800	                   | Assistance at Operations                         | S
+900	                   | Optometry                                        | O
+1000	               | Radiotherapy and Therapeutic Nuclear Medicine    | T
+1100	               | Other MBS services                               | T
+-----------------------------------------------------------------------------------
+
+The dictionary for the timespan is here:
+--------------------------------
+Explanation          | Encoding
+--------------------------------
+[same day - 2 weeks] | 0
+(2 weeks  - 1 month] | 1
+(1 month  - 3 monts] | 2
+(3 months - 1 year]  | 3
+more than 1 year     | 4
+--------------------------------
 
 Remarks:
 - PTNT_ID in PBS is referred to as PIN in MBS.
