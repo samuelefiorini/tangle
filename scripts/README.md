@@ -3,7 +3,7 @@
 These scripts are meant to extract relevant information from the raw MBS-PBS 10% dataset.
 To run these scripts you are supposed to have to have organized the MBS-PBS 10% dataset in a folder (*e.g.:* `../../../data`).
 
-Python 2.7 needed.
+Scripts developed for Python 2.7.
 
 ## Usage and details
 ### - `labels_assignment.py`
