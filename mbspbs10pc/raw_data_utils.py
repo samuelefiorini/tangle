@@ -153,10 +153,11 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
     # And collect the results
     results = [p.get() for p in results]
 
-    # Clear screen
-    if os.name == 'posix':
-        os.system('clear')
-    else:
-        os.system('cls')
+    # # Clear screen
+    for i in range(n_jobs): print('\n')
+    # if os.name == 'posix':
+    #     os.system('clear')
+    # else:
+    #     os.system('cls')
 
     return dict(shared_raw_data), dfs

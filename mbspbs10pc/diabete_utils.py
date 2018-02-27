@@ -146,7 +146,7 @@ def find_diabetics(pbs_files, filter_copayments=True,
     # Itereate on the pbs files and get the index of the individuals that
     # were prescribed to diabes drugs
     index = dict()
-    for pbs in tqdm(pbs_files):
+    for pbs in tqdm(sorted(pbs_files)):
         _pbs = os.path.split(pbs)[-1]  # more visually appealing
 
         if filter_copayments:  # Select the appropriate co-payment threshold
