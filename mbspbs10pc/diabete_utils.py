@@ -192,7 +192,8 @@ def find_diabetes_drugs_users(filename, dd, co_payment=None,
     diabetes_drugs_users: dictionary
         The dictionary of unique patients identifiers that were prescribed to
         dibates drugs in the input pbs file. The dictionary has PTNT_ID as index
-        and SPPLY_DT as value.
+        and SPPLY_DT as value. The SPPLY_DT corresponds to the FIRST time the
+        patient is prescribed to the use of any diabetes control drug.
     """
     manager = Manager()
     results = manager.dict()
@@ -218,14 +219,15 @@ def find_diabetes_drugs_users(filename, dd, co_payment=None,
     progress = tqdm(
         total=len(results.keys()),
         position=1,  # the next line is ugly, but it is just the year of the PBS
-        desc="Processing PBS {}".format(os.path.split(filename)[-1].split('_')[-1].split('.')[0]),
+        desc="Processing PBS-{}".format(os.path.split(filename)[-1].split('_')[-1].split('.')[0]),
     )
     diabetes_drugs_users = dict()
     for k in results.keys():
         progress.update(1)
-        ptnt_ids = np.unique(results[k]['PTNT_ID'].values.ravel())
-        for ptnt_id in ptnt_ids:
-            diabetes_drugs_users[ptnt_id] = results[k][results[k]['PTNT_ID'] == ptnt_id]['SPPLY_DT']
+        ptnt_ids = np.unique(results[k]['PTNT_ID'].values.ravel())  # get the unique list of patient id
+        for ptnt_id in ptnt_ids:  # and for each patient id
+            tmp = results[k][results[k]['PTNT_ID'] == ptnt_id]  # extract the corresponding content
+            diabetes_drugs_users[ptnt_id] = tmp['SPPLY_DT'].min()  # and keep only the first one
 
     return diabetes_drugs_users
 
@@ -243,6 +245,7 @@ def process_chunk(i, chunk, results, dd, co_payment):
                              chunk['ITM_CD'].isin(dd))
 
     content = chunk.loc[idx, ['PTNT_ID', 'SPPLY_DT']]
+    content.loc[:, 'SPPLY_DT'] = pd.to_datetime(content['SPPLY_DT'], format='%d%b%Y')
 
     if content.shape[0] > 0:  # save only the relevant content
         results[i] = content  # so content has 'PTNT_ID' and 'SPPLY_DT'
