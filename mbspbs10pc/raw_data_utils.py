@@ -17,7 +17,7 @@ from tqdm import tqdm
 ___MBS_FILES_DICT__ = dict()
 
 
-def worker(i, split, raw_data):
+def worker(i, pin_split, spply_dt_split, raw_data):
     """Patient tracking worker."""
     with warnings.catch_warnings():  # ignore SettingWithCopyWarning
         warnings.simplefilter(action='ignore', category=SettingWithCopyWarning)
@@ -35,32 +35,36 @@ def worker(i, split, raw_data):
         for k in sorted(___MBS_FILES_DICT__.keys()):
             progress.update(1)
             # keep only a subset of the full MBS data
-            small_mbs_dd[k] = ___MBS_FILES_DICT__[k].loc[___MBS_FILES_DICT__[k]['PIN'].isin(split)]
+            small_mbs_dd[k] = ___MBS_FILES_DICT__[k].loc[___MBS_FILES_DICT__[k]['PIN'].isin(pin_split)]
             # change format to the right datetime format (this is gonna be useful later)
             small_mbs_dd[k].loc[:, 'DOS'] = pd.to_datetime(small_mbs_dd[k]['DOS'], format='%d%b%Y')
             # and sort by date
             small_mbs_dd[k].sort_values(by='DOS', inplace=True)
-            # # retrieve the first diabetes-related examination and
-            # # exclude the following ones
-            # # TODO
-            # first_dd = np.where(small_mbs_dd[k]['ITEM'].isin(dd))[0][0]
-            # small_mbs_dd[k] = small_mbs_dd[k].iloc[:first_dd,:]
         progress.close()
 
         # Second progress
         progress = tqdm(
-            total=len(split),
+            total=len(pin_split),
             position=i,
             desc="[job {}] Sequence extraction".format(i),
         )
 
         # Now track down each patient in the reduced MBS files
         # for s in tqdm(split, desc='[job {}] Sequence extraction'.format(i)):
-        for s in split:
+        for i in range(len(pin_split)):
             progress.update(1)
+            pin = pin_split[i]  # the current patient PIN
+            date = spply_dt_split[i]  # the first supply date
+
+            # create a temporary data frame storing only the information relevant
+            # to the current pin
             tmp = pd.DataFrame(columns=['PIN', 'DOS', 'BTOS'])
             for k in sorted(___MBS_FILES_DICT__.keys()):
-                tmp = pd.concat((tmp, small_mbs_dd[k].loc[small_mbs_dd[k]['PIN'] == s]))
+                tmp = pd.concat((tmp, small_mbs_dd[k].loc[small_mbs_dd[k]['PIN'] == pin, :]))
+
+            # retrieve the first diabetes-related examination and
+            # exclude the MBS items coming after that date
+            tmp = tmp[tmp['DOS'] < date]
 
             if len(tmp['BTOS'].values) > 0:
                 # evaluate the first order difference and convert each entry in WEEKS
@@ -71,9 +75,9 @@ def worker(i, split, raw_data):
                 seq.append(tmp['BTOS'].values[-1])
                 # and finally collapse everything down to a string like 'A5M8A...'
                 seq = ''.join(map(str, seq))
-                raw_data[s] = seq
+                raw_data[pin] = seq
             else:
-                raw_data[s] = list()
+                raw_data[pin] = list()
         progress.close()
 
 
@@ -114,7 +118,8 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
     raw_data = dict()
 
     # Step 0: load the source file, the imap file and the diabetes drugs file
-    dfs = pd.read_csv(source, header=0)
+    dfs = pd.read_csv(source, header=0, index_col=0)
+    dfs['PTNT_ID'] = dfs.index  # FIXME: this is LEGACY CODE
     imap = pd.read_csv(os.path.join(home[0], 'data', 'imap_derived.csv'), header=0,
                        usecols=['ITEM', 'BTOS'])
 
@@ -127,7 +132,7 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
     # Step 1: get sex and age
     df_pin_lookout = pd.read_csv(sample_pin_lookout, header=0)
     df_pin_lookout['AGE'] = datetime.datetime.now().year - df_pin_lookout['YOB']
-    dfs = pd.merge(dfs, df_pin_lookout, how='left', left_on='PTNT_ID', right_on='PIN')[['PIN', 'SEX', 'AGE']]
+    dfs = pd.merge(dfs, df_pin_lookout, how='left', left_on='PTNT_ID', right_on='PIN')[['PIN', 'SEX', 'AGE', 'SPPLY_DT']]
 
     # Step 2: follow each patient in the mbs files
     # at first create a very large dictionary with all the MBS files
@@ -135,7 +140,7 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
     # It is possible here to exclude pregnant subjects
     global ___MBS_FILES_DICT__
     for mbs in tqdm(mbs_files, desc='MBS files loading'):
-        dd = pd.read_csv(mbs, header=0, usecols=['PIN', 'ITEM', 'DOS'])
+        dd = pd.read_csv(mbs, header=0, usecols=['PIN', 'ITEM', 'DOS'], engine='c')
         if exclude_pregnancy: dd = dd.loc[~dd['ITEM'].isin(pregnancy_items), :]
         ___MBS_FILES_DICT__[mbs] = pd.merge(dd, imap, how='left', on='ITEM')
 
@@ -144,20 +149,17 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
     shared_raw_data = manager.dict(raw_data)
     pool = mp.Pool(n_jobs)
 
-    # Split the PINs in n_jobs approximately equal chunks
-    splits = np.array_split(dfs['PIN'].values, n_jobs)
+    # Split the patietns in n_jobs approximately equal chunks
+    pin_splits = np.array_split(dfs['PIN'].values, n_jobs)
+    spply_dt_splits = np.array_split(dfs['SPPLY_DT'].values, n_jobs)
 
     # Submit the patient tracking jobs
-    results = [pool.apply_async(worker, (i, split, shared_raw_data)) for i, split in enumerate(splits)]
+    results = [pool.apply_async(worker, (i, pin_splits[i], spply_dt_splits[i], shared_raw_data)) for i in range(len(pin_splits))]
 
     # And collect the results
     results = [p.get() for p in results]
 
-    # # Clear screen
-    for i in range(n_jobs): print('\n')
-    # if os.name == 'posix':
-    #     os.system('clear')
-    # else:
-    #     os.system('cls')
+    # Jump one line
+    print('\n')
 
     return dict(shared_raw_data), dfs
