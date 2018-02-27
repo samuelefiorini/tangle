@@ -224,10 +224,9 @@ def find_diabetes_drugs_users(filename, dd, co_payment=None,
     diabetes_drugs_users = dict()
     for k in results.keys():
         progress.update(1)
-        ptnt_ids = np.unique(results[k]['PTNT_ID'].values.ravel())  # get the unique list of patient id
-        for ptnt_id in ptnt_ids:  # and for each patient id
-            tmp = results[k][results[k]['PTNT_ID'] == ptnt_id]  # extract the corresponding content
-            diabetes_drugs_users[ptnt_id] = tmp['SPPLY_DT'].min()  # and keep only the first one
+        content = results[k]
+        for ptnt_id in content.keys():
+            diabetes_drugs_users[ptnt_id] = content[ptnt_id]
 
     return diabetes_drugs_users
 
@@ -247,5 +246,12 @@ def process_chunk(i, chunk, results, dd, co_payment):
     content = chunk.loc[idx, ['PTNT_ID', 'SPPLY_DT']]
     content.loc[:, 'SPPLY_DT'] = pd.to_datetime(content['SPPLY_DT'], format='%d%b%Y')
 
+    # Prepare the output
+    out = dict()  # initialize the empty output dictionary
+    ptnt_ids = np.unique(content['PTNT_ID'].values.ravel())  # get the unique list of patient id
+    for ptnt_id in ptnt_ids:  # and for each patient id
+        tmp = content[content['PTNT_ID'] == ptnt_id]  # extract the corresponding content
+        out[ptnt_id] = tmp['SPPLY_DT'].min()  # and keep only the first one
+
     if content.shape[0] > 0:  # save only the relevant content
-        results[i] = content  # so content has 'PTNT_ID' and 'SPPLY_DT'
+        results[i] = out  # so content has 'PTNT_ID' as inted and 'SPPLY_DT' as value
