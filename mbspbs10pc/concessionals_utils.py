@@ -10,7 +10,7 @@ import pandas as pd
 from tqdm import tqdm
 
 # __C0C1_THRESH__ = 0.5
-__C0C1_THRESH__ = 0.99
+__C0C1_THRESH__ = 0.75
 
 
 def flatten(x):

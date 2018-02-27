@@ -129,10 +129,9 @@ def main():
         print('* Looking for subjects on diabete control drugs ...')  # progress bar embedded
         dd = d_utils.find_diabetics(pbs_files_fullpath,
                                     filter_copayments=False,
-                                    monthly_breakdown=False,
                                     chunksize=args.chunk_size,
                                     n_jobs=args.n_jobs)
-        print('* Saving {} '.format(filename), end=' ')
+        print('\n* Saving {} '.format(filename), end=' ')
         pkl.dump(dd, open(filename, 'wb'))
         print(u'\u2713')
     else:
@@ -149,7 +148,8 @@ def main():
         pos_id = d_utils.find_positive_samples(dd, cons_cont_conc,
                                                target_year=args.target_year)
         print('* Saving {}'.format(filename), end=' ')
-        pd.DataFrame(data=pos_id, columns=['PTNT_ID']).to_csv(filename, index=False)
+        pd.DataFrame.from_dict(pos_id, orient='index').rename({0: 'SPPLY_DT'}, axis=1).to_csv(filename)
+        # pd.DataFrame(data=pos_id, columns=['PTNT_ID']).to_csv(filename, index=False)
         print(u'\u2713')
     else:
         pos_id = pd.read_csv(filename, header=0).values.ravel()

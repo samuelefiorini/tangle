@@ -32,20 +32,23 @@ def find_positive_samples(dd, cc, target_year=2012):
 
     Returns:
     --------------
-    positive_subjects: list
-        The list of target patient IDs (positive class).
+    positive_subjects: dict
+        Dictionary having target patient IDs (positive class) as keys and
+        SPPLY_DT as values.
     """
     # Init the postive subjects with the full list of people taking
     # diabetes drugs in the target year
-    positive_subjects = set(dd['PBS_SAMPLE_10PCT_'+str(target_year)+'.csv'])
+    positive_subjects = set(dd['PBS_SAMPLE_10PCT_'+str(target_year)+'.csv'].keys())
     positive_subjects = positive_subjects.intersection(cc)  # keep only the concessionals
 
     for year in np.arange(2008, target_year)[::-1]:
-        curr = set(dd['PBS_SAMPLE_10PCT_'+str(year)+'.csv'])
+        curr = set(dd['PBS_SAMPLE_10PCT_'+str(year)+'.csv'].keys())
         curr = curr.intersection(cc)  # keep only the concessionals
         positive_subjects = set(filter(lambda x: x not in curr, positive_subjects))
 
-    return list(positive_subjects)
+    positive_subjects = {k: dd['PBS_SAMPLE_10PCT_'+str(target_year)+'.csv'][k] for k in list(positive_subjects)}
+
+    return positive_subjects
 
 
 def find_negative_samples(pbs_files, dd, cc):
@@ -94,7 +97,7 @@ def find_negative_samples(pbs_files, dd, cc):
     return list(negative_subjects)
 
 
-def find_diabetics(pbs_files, filter_copayments=True, monthly_breakdown=False,
+def find_diabetics(pbs_files, filter_copayments=True,
                    chunksize=10, n_jobs=1):
     """Search people using diabetes drugs in input PBS files.
 
@@ -108,9 +111,6 @@ def find_diabetics(pbs_files, filter_copayments=True, monthly_breakdown=False,
         total cost < copayment(year) will be excluded. This improves
         consistency for entries that are issued after April 2012. This only
         holds for General Beneficiaries.
-
-    monthly_breakdown: bool (default=False)
-        When True, split the records in different months for each year.
 
     chunksize: integer
         The number of rows the PBS file should be split into.
@@ -146,7 +146,7 @@ def find_diabetics(pbs_files, filter_copayments=True, monthly_breakdown=False,
     # Itereate on the pbs files and get the index of the individuals that
     # were prescribed to diabes drugs
     index = dict()
-    for pbs in tqdm(pbs_files):
+    for pbs in tqdm(sorted(pbs_files)):
         _pbs = os.path.split(pbs)[-1]  # more visually appealing
 
         if filter_copayments:  # Select the appropriate co-payment threshold
@@ -157,14 +157,13 @@ def find_diabetics(pbs_files, filter_copayments=True, monthly_breakdown=False,
 
         index[_pbs] = find_diabetes_drugs_users(pbs, dd,
                                                 co_payment=co_payment,
-                                                monthly_breakdown=monthly_breakdown,
                                                 chunksize=chunksize,
                                                 n_jobs=n_jobs)
     return index
 
 
 def find_diabetes_drugs_users(filename, dd, co_payment=None,
-                              monthly_breakdown=False, chunksize=10, n_jobs=1):
+                              chunksize=10, n_jobs=1):
     """Find the diabetes drugs user from a single PBS file.
 
     This function supports parallel asyncronous access to chunks of the input
@@ -182,9 +181,6 @@ def find_diabetes_drugs_users(filename, dd, co_payment=None,
         The Co-payment threshold of the current year.
         Source: [http://www.pbs.gov.au/info/healthpro/explanatory-notes/front/fee]
 
-    monthly_breakdown: bool (default=False)
-        When True, split the records in different months for each year.
-
     chunksize: integer
         The number of rows the PBS file should be split into.
 
@@ -193,11 +189,11 @@ def find_diabetes_drugs_users(filename, dd, co_payment=None,
 
     Returns:
     --------------
-    index: list or dictionary
-        The list of unique patients identifiers that were prescribed to dibates
-        drugs in the input pbs file. If monthly_breakdown is True, the function
-        returns a dictionary of lists, where each key is a month.
-        E.g.: {1: (232,2312,442,...), 2: (11,678,009,...), ...}
+    diabetes_drugs_users: dictionary
+        The dictionary of unique patients identifiers that were prescribed to
+        dibates drugs in the input pbs file. The dictionary has PTNT_ID as index
+        and SPPLY_DT as value. The SPPLY_DT corresponds to the FIRST time the
+        patient is prescribed to the use of any diabetes control drug.
     """
     manager = Manager()
     results = manager.dict()
@@ -217,38 +213,22 @@ def find_diabetes_drugs_users(filename, dd, co_payment=None,
     for f in jobs:
         f.get()
 
-    # Check for monthly breakdown flag
-    if monthly_breakdown:
-        indexes = {m: set() for m in range(1, 13)}  # each key is a month
-        year = int(results[0]['SPPLY_DT'].values[0][-4:])  # retrieve the current year
-        #_full_index = set() # avoid duplicates in the same year
+    # Collapse the results in a single dictionary
+    # having PTNT_ID as index and SPPLY_DT as value
+    # Progressbar
+    progress = tqdm(
+        total=len(results.keys()),
+        position=1,  # the next line is ugly, but it is just the year of the PBS
+        desc="Processing PBS-{}".format(os.path.split(filename)[-1].split('_')[-1].split('.')[0]),
+    )
+    diabetes_drugs_users = dict()
+    for k in results.keys():
+        progress.update(1)
+        content = results[k]
+        for ptnt_id in content.keys():
+            diabetes_drugs_users[ptnt_id] = content[ptnt_id]
 
-        for k in results.keys(): # collapse all the results in a single object
-            content = results[k]
-            content['SPPLY_DT'] = pd.to_datetime(content['SPPLY_DT'], format='%d%b%Y') # set the right date format
-
-            for month in range(1, 13):  # search for all possible months
-                _, last_day = calendar.monthrange(year, month)
-
-                # filter the items of the current month
-                ptnt_id_month = content[np.logical_and(content['SPPLY_DT'] >= datetime.date(year=year, month=month, day=1), content['SPPLY_DT'] <= datetime.date(year=year, month=month, day=last_day))]['PTNT_ID']
-
-                for item in ptnt_id_month:  # iterate over the possible PTNT_IDs
-                    indexes[month].add(item)
-                    #if item not in _full_index: indexes[month].add(item) # avoid duplicates in the same year
-                    #_full_index.add(item)
-
-        return {m: list(indexes[m]) for m in range(1, 13)}
-
-    else:
-        # Collapse the results in a single set
-        index = set()
-        for k in results.keys():
-            content = results[k]['PTNT_ID']  # extrapolate the only relevant field
-            for item in content:  # FIXME find a way to avoid nested loops
-                index.add(item)
-
-        return list(index)
+    return diabetes_drugs_users
 
 
 def process_chunk(i, chunk, results, dd, co_payment):
@@ -263,7 +243,15 @@ def process_chunk(i, chunk, results, dd, co_payment):
         idx = np.logical_and(chunk['PTNT_CNTRBTN_AMT']+chunk['BNFT_AMT'] >= co_payment,
                              chunk['ITM_CD'].isin(dd))
 
-    content = chunk.loc[idx][['PTNT_ID', 'SPPLY_DT']]
+    content = chunk.loc[idx, ['PTNT_ID', 'SPPLY_DT']]
+    content.loc[:, 'SPPLY_DT'] = pd.to_datetime(content['SPPLY_DT'], format='%d%b%Y')
+
+    # Prepare the output
+    out = dict()  # initialize the empty output dictionary
+    ptnt_ids = np.unique(content['PTNT_ID'].values.ravel())  # get the unique list of patient id
+    for ptnt_id in ptnt_ids:  # and for each patient id
+        tmp = content[content['PTNT_ID'] == ptnt_id]  # extract the corresponding content
+        out[ptnt_id] = tmp['SPPLY_DT'].min()  # and keep only the first one
 
     if content.shape[0] > 0:  # save only the relevant content
-        results[i] = content  # contenta has 'PTNT_ID' and 'SPPLY_DT'
+        results[i] = out  # so content has 'PTNT_ID' as inted and 'SPPLY_DT' as value
