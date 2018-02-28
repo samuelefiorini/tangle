@@ -85,14 +85,10 @@ def find_negative_samples(pbs_files, dd, cc):
     diabetic_overall = diabetic_overall.intersection(cc)   # keep only the concessionals
 
     for pbs in tqdm(pbs_files): # TODO maybe use multiprocessing here
-        # _pbs = os.path.split(pbs)[-1]  # more visually appealing
-
-        # print('- Reading {} ...'.format(_pbs))
         curr = set(pd.read_csv(pbs, header=0, usecols=['PTNT_ID']).values.ravel())
         curr = curr.intersection(cc)  # keep only the concessionals
         # iteratively increase the set of indexes
         negative_subjects |= set(filter(lambda x: x not in diabetic_overall, curr))
-        # print('done.')
 
     return list(negative_subjects)
 

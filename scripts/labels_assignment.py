@@ -164,8 +164,7 @@ def main():
         print('* Looking for the negative samples ...')  # progress bar embedded
         neg_id = d_utils.find_negative_samples(pbs_files_fullpath, dd, cons_cont_conc)
         print('* Saving {}'.format(filename), end=' ')
-        pd.DataFrame.from_dict(neg_id, orient='index').rename({0: 'SPPLY_DT'}, axis=1).to_csv(filename)
-        # pd.DataFrame(data=neg_id, columns=['PTNT_ID']).to_csv(filename, index=False)
+        pd.DataFrame(data=neg_id, columns=['PTNT_ID']).to_csv(filename, index=False)
         print(u'\u2713')
     else:
         neg_id = pd.read_csv(filename, header=0).values.ravel()

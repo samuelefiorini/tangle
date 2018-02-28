@@ -103,7 +103,8 @@ def worker(i, pin_split, spply_dt_split, raw_data):
 
             # retrieve the first diabetes-related examination and
             # exclude the MBS items coming after that date
-            tmp = tmp[tmp['DOS'] < date]
+            if date is not None:  # check for the negative class
+                tmp = tmp[tmp['DOS'] < date]
 
             if len(tmp['BTOS-4D'].values) > 0:
                 # evaluate the first order difference and convert each entry in WEEKS
@@ -161,6 +162,8 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
     # Step 0: load the source file, the btos4d file and the diabetes drugs file
     dfs = pd.read_csv(source, header=0, index_col=0)
     dfs['PTNT_ID'] = dfs.index  # FIXME: this is LEGACY CODE
+    if 'SPPLY_DT' not in dfs.columns:  # fixing the bug with the negative class
+        dfs['SPPLY_DT'] = None
     btos4d = pd.read_csv(os.path.join(home[0], 'data', 'btos4d.csv'), header=0,
                          usecols=['ITEM', 'BTOS-4D'])
 
