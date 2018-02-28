@@ -1,5 +1,6 @@
 # OSX files
 *.DS_Store
+**/*.~locks*
 
 # local folders
 **/tmp
@@ -109,3 +110,5 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+*.csv#
