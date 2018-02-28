@@ -113,8 +113,8 @@ def worker(i, pin_split, spply_dt_split, raw_data):
                 timedeltas = map(timespan_encoding, timedeltas)
                 # then build the sequence as ['exam', idle-days, 'exam', idle-days, ...]
                 seq = flatten([[btos, dt] for btos, dt in zip(tmp['BTOS-4D'].values, timedeltas)])
-                seq.append(tmp['BTOS-4D'].values[-1])
-                # and finally collapse everything down to a string like 'A5M8A...'
+                seq.append(tmp['BTOS-4D'].values[-1])  # add the last exam (ignored by zip)
+                # and finally collapse everything down to a string like 'G0G1H...'
                 seq = ''.join(map(str, seq))
                 raw_data[pin] = seq
             else:
