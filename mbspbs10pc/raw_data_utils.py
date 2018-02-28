@@ -17,6 +17,45 @@ from tqdm import tqdm
 ___MBS_FILES_DICT__ = dict()
 
 
+def timespan_encoding(days):
+    """Convert the input days in the desired timespan encoding.
+
+    This function follows this encoding:
+    --------------------------------
+    Time duration        | Encoding
+    --------------------------------
+    [same day - 2 weeks] | 0
+    (2 weeks  - 1 month] | 1
+    (1 month  - 3 monts] | 2
+    (3 months - 1 year]  | 3
+    more than 1 year     | 4
+    --------------------------------
+
+    Parameters:
+    --------------
+    days: int
+        The number of days between any two examinations.
+
+    Returns:
+    --------------
+    enc: string
+        The corresponding encoding.
+    """
+    if days < 0:
+        raise ValueError('Unsupported negative timespans')
+    elif days >= 0 and days <= 14:
+        enc = 0
+    elif days > 14 and days <= 30:  # using the "economic" month duration
+        enc = 1
+    elif days > 30 and days <= 90:  # using the "economic" month duration
+        enc = 2
+    elif days > 90 and days <= 360:  # using the "economic" year duration
+        enc = 3
+    else:
+        enc = 4
+    return str(enc)
+
+
 def worker(i, pin_split, spply_dt_split, raw_data):
     """Patient tracking worker."""
     with warnings.catch_warnings():  # ignore SettingWithCopyWarning
@@ -58,7 +97,7 @@ def worker(i, pin_split, spply_dt_split, raw_data):
 
             # create a temporary data frame storing only the information relevant
             # to the current pin
-            tmp = pd.DataFrame(columns=['PIN', 'DOS', 'BTOS'])
+            tmp = pd.DataFrame(columns=['PIN', 'DOS', 'BTOS-4D'])
             for k in sorted(___MBS_FILES_DICT__.keys()):
                 tmp = pd.concat((tmp, small_mbs_dd[k].loc[small_mbs_dd[k]['PIN'] == pin, :]))
 
@@ -66,13 +105,15 @@ def worker(i, pin_split, spply_dt_split, raw_data):
             # exclude the MBS items coming after that date
             tmp = tmp[tmp['DOS'] < date]
 
-            if len(tmp['BTOS'].values) > 0:
+            if len(tmp['BTOS-4D'].values) > 0:
                 # evaluate the first order difference and convert each entry in WEEKS
-                timedeltas = map(lambda x: pd.Timedelta(x).days//7,
+                timedeltas = map(lambda x: pd.Timedelta(x).days,
                                  tmp['DOS'].values[1:] - tmp['DOS'].values[:-1])
+                # use the appropriate encoding
+                timedeltas = map(timespan_encoding, timedeltas)
                 # then build the sequence as ['exam', idle-days, 'exam', idle-days, ...]
-                seq = flatten([[btos, dt] for btos, dt in zip(tmp['BTOS'].values, timedeltas)])
-                seq.append(tmp['BTOS'].values[-1])
+                seq = flatten([[btos, dt] for btos, dt in zip(tmp['BTOS-4D'].values, timedeltas)])
+                seq.append(tmp['BTOS-4D'].values[-1])
                 # and finally collapse everything down to a string like 'A5M8A...'
                 seq = ''.join(map(str, seq))
                 raw_data[pin] = seq
@@ -117,11 +158,11 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
     """
     raw_data = dict()
 
-    # Step 0: load the source file, the imap file and the diabetes drugs file
+    # Step 0: load the source file, the btos4d file and the diabetes drugs file
     dfs = pd.read_csv(source, header=0, index_col=0)
     dfs['PTNT_ID'] = dfs.index  # FIXME: this is LEGACY CODE
-    imap = pd.read_csv(os.path.join(home[0], 'data', 'imap_derived.csv'), header=0,
-                       usecols=['ITEM', 'BTOS'])
+    btos4d = pd.read_csv(os.path.join(home[0], 'data', 'btos4d.csv'), header=0,
+                         usecols=['ITEM', 'BTOS-4D'])
 
     # check weather or not exclude pregnant subjects
     if exclude_pregnancy:
@@ -142,7 +183,7 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
     for mbs in tqdm(mbs_files, desc='MBS files loading'):
         dd = pd.read_csv(mbs, header=0, usecols=['PIN', 'ITEM', 'DOS'], engine='c')
         if exclude_pregnancy: dd = dd.loc[~dd['ITEM'].isin(pregnancy_items), :]
-        ___MBS_FILES_DICT__[mbs] = pd.merge(dd, imap, how='left', on='ITEM')
+        ___MBS_FILES_DICT__[mbs] = pd.merge(dd, btos4d, how='left', on='ITEM')
 
     # This large dictionary is shared across multiple processes
     manager = Manager()

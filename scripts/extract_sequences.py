@@ -6,13 +6,14 @@ services usage of each individual. A possible list may be something like:
 
     123: 'G0P1P0D2'
 
-where G, P and D are different modified broad type of service BOTS-4D.
-While 0, 1, etc are the timespan between the two examinations.
-So, MBS provider in even position and days in odd positions.
+where, 123 is a patient id; G, P and D are different modified broad type of
+service BOTS-4D; while 0, 1, etc are the timespan between the two examinations.
+So, MBS items in odd position and timespan between any two of them in even
+positions.
 
-The encoding of the MBS items is reported in the column BTOS-4D, where 4D stads
+The encoding of the MBS items is reported in the column BTOS-4D, where 4D stands
 for "for diabetes" and it is a modified BTOS naming (see also
-data/btos_details.csv):
+data/btos_details.csv and notebooks/BTOS-4D.ipynb):
 -----------------------------------------------------------------------------------
 BTOS (Heirarchy order) | BTOS NAME	                                      | BTOS-4D
 -----------------------------------------------------------------------------------
@@ -20,23 +21,37 @@ BTOS (Heirarchy order) | BTOS NAME	                                      | BTOS-
 102	                   | Non-referred attendances - Enhanced Primary Care | G
 103	                   | Non-referred attendances - Other                 | G
 110	                   | Non-referred attendances - Practice Nurse Items  |	G
-150	                   | Other Allied Health                              |	H
+150	                   | Other Allied Health                              |	L
 200	                   | Specialist attendances	Specialist attendances    |	E
 300	                   | Obstetrics	                                      |	B
 400	                   | Anaesthetics                                     |	S
 501	                   | Pathology Collection Items	                      | P
 502	                   | Pathology Tests                                  | P
-600	                   | Diagnostic Imaging	                              | D
+600	                   | Diagnostic Imaging	                              | I
 700	                   | Operations                                       | S
 800	                   | Assistance at Operations                         | S
 900	                   | Optometry                                        | O
 1000	               | Radiotherapy and Therapeutic Nuclear Medicine    | T
 1100	               | Other MBS services                               | T
+xxxx                   | Diabetes-related treatments                      | D
+xxxx                   | Hb1c test                                        | H
+xxxx                   | Health assessment for people 40-49 years at risk | R
 -----------------------------------------------------------------------------------
 
-The dictionary for the timespan is here:
+Diabetes-related treatments includes items like (see notebooks/BTOS-4D.ipynb):
+- Completion of an annual cycle of care for patients with established diabetes mellitus
+- Examination of the eyes of a patient with diabetes mellitus
+- Group allied health services for people with Type 2 diabetes
+
+Other symbols are:
++ Hb1c test
++ Health Assessment provided as a type 2 diabetes risk evaluation for people aged 40-49 years with a high risk of developing type 2 diabetes as determined by the Australian Type 2 Diabetes Risk Assessment Tool
+
+There are a total number of 12 unique symbols: [B, E, D, G, I, H, L, O, P, S, R, T]
+
+The dictionary for the timespan is here (see `raw_data_utils.timespan_encoding`):
 --------------------------------
-Explanation          | Encoding
+Time duration        | Encoding
 --------------------------------
 [same day - 2 weeks] | 0
 (2 weeks  - 1 month] | 1
