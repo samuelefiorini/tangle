@@ -34,7 +34,7 @@ BTOS (Heirarchy order) | BTOS NAME	                                      | BTOS-
 1000	               | Radiotherapy and Therapeutic Nuclear Medicine    | T
 1100	               | Other MBS services                               | T
 xxxx                   | Diabetes-related treatments                      | D
-xxxx                   | Hb1c test                                        | H
+xxxx                   | HbA1c test                                       | H
 xxxx                   | Health assessment for people 40-49 years at risk | R
 -----------------------------------------------------------------------------------
 
@@ -44,7 +44,7 @@ Diabetes-related treatments includes items like (see notebooks/BTOS-4D.ipynb):
 - Group allied health services for people with Type 2 diabetes
 
 Other symbols are:
-+ Hb1c test
++ HbA1c test
 + Health Assessment provided as a type 2 diabetes risk evaluation for people aged 40-49 years with a high risk of developing type 2 diabetes as determined by the Australian Type 2 Diabetes Risk Assessment Tool
 
 There are a total number of 12 unique symbols: [B, E, D, G, I, H, L, O, P, S, R, T]

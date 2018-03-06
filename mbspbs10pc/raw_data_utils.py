@@ -97,7 +97,7 @@ def worker(i, pin_split, spply_dt_split, raw_data):
 
             # create a temporary data frame storing only the information relevant
             # to the current pin
-            tmp = pd.DataFrame(columns=['PIN', 'DOS', 'BTOS-4D'])
+            tmp = pd.DataFrame(columns=['PIN', 'DOS', 'PINSTATE', 'BTOS-4D'])
             for k in sorted(___MBS_FILES_DICT__.keys()):
                 tmp = pd.concat((tmp, small_mbs_dd[k].loc[small_mbs_dd[k]['PIN'] == pin, :]))
 
@@ -117,9 +117,14 @@ def worker(i, pin_split, spply_dt_split, raw_data):
                 seq.append(tmp['BTOS-4D'].values[-1])  # add the last exam (ignored by zip)
                 # and finally collapse everything down to a string like 'G0G1H...'
                 seq = ''.join(map(str, seq))
-                raw_data[pin] = seq
+                # compute the average age during the treatment by computing the average year
+                avg_year = np.mean(pd.DatetimeIndex(tmp['DOS'].values.ravel()).year)
+                # extract the last pinstate
+                last_pinstate = tmp['PINSTATE'].values.ravel()[-1]
+                # build up the result
+                raw_data[pin] = (seq, avg_year, last_pinstate)
             else:
-                raw_data[pin] = list()
+                raw_data[pin] = (list(), None, None)
         progress.close()
 
 
@@ -175,8 +180,10 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
 
     # Step 1: get sex and age
     df_pin_lookout = pd.read_csv(sample_pin_lookout, header=0)
-    df_pin_lookout['AGE'] = datetime.datetime.now().year - df_pin_lookout['YOB']
-    dfs = pd.merge(dfs, df_pin_lookout, how='left', left_on='PTNT_ID', right_on='PIN')[['PIN', 'SEX', 'AGE', 'SPPLY_DT']]
+    df_pin_lookout['AGE'] = datetime.datetime.now().year - df_pin_lookout['YOB']  # this is the age as of TODAY
+    dfs = pd.merge(dfs, df_pin_lookout, how='left', left_on='PTNT_ID', right_on='PIN')[['PIN', 'SEX', 'AGE', 'SPPLY_DT', 'YOB']]
+    dfs = dfs.set_index('PIN')  # set PIN as index (easier access below)
+    # SPPLY_DT is the date of the FIRST diabetes drug supply
 
     # Step 2: follow each patient in the mbs files
     # at first create a very large dictionary with all the MBS files
@@ -184,7 +191,7 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
     # It is possible here to exclude pregnant subjects
     global ___MBS_FILES_DICT__
     for mbs in tqdm(mbs_files, desc='MBS files loading'):
-        dd = pd.read_csv(mbs, header=0, usecols=['PIN', 'ITEM', 'DOS'], engine='c')
+        dd = pd.read_csv(mbs, header=0, usecols=['PIN', 'ITEM', 'DOS', 'PINSTATE'], engine='c')
         if exclude_pregnancy: dd = dd.loc[~dd['ITEM'].isin(pregnancy_items), :]
         ___MBS_FILES_DICT__[mbs] = pd.merge(dd, btos4d, how='left', on='ITEM')
 
@@ -194,8 +201,8 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
     pool = mp.Pool(n_jobs)
 
     # Split the patietns in n_jobs approximately equal chunks
-    pin_splits = np.array_split(dfs['PIN'].values, n_jobs)
-    spply_dt_splits = np.array_split(dfs['SPPLY_DT'].values, n_jobs)
+    pin_splits = np.array_split(dfs.index, n_jobs)  # PIN is the index
+    spply_dt_splits = np.array_split(dfs['SPPLY_DT'].values.ravel(), n_jobs)
 
     # Submit the patient tracking jobs
     results = [pool.apply_async(worker, (i, pin_splits[i], spply_dt_splits[i], shared_raw_data)) for i in range(len(pin_splits))]
@@ -203,7 +210,16 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
     # And collect the results
     results = [p.get() for p in results]
 
+    # Break-down the raw_data dictionary in its components, i.e.: sequence, avg year
+    output = dict()
+    for k in tqdm(shared_raw_data.keys(), desc='Finalizing', mininterval=5):
+        if shared_raw_data[k][1] is not None:
+            output[k] = shared_raw_data[k][0]  # save the sequence
+            dfs.loc[k, 'AVG_AGE'] = shared_raw_data[k][1] - dfs.loc[k, 'YOB']  # save the average age
+            dfs.loc[k, 'PINSTATE'] = shared_raw_data[k][2]  # save the last pinstate
+    dfs = dfs.dropna()  # get rid of the extra info for the empty sequences
+
     # Jump one line
     print('\n')
 
-    return dict(shared_raw_data), dfs
+    return output, dfs
