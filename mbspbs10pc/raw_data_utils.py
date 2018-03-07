@@ -66,6 +66,7 @@ def worker(i, pin_split, spply_dt_split, raw_data):
             total=len(___MBS_FILES_DICT__.keys()),
             position=i,
             desc="[job {}] Pre-filtering".format(i),
+            leave=False
         )
 
         # Pre-filter: keep only the elements of mbs_dd that are in the current split
@@ -86,6 +87,7 @@ def worker(i, pin_split, spply_dt_split, raw_data):
             total=len(pin_split),
             position=i,
             desc="[job {}] Sequence extraction".format(i),
+            leave=False
         )
 
         # Now track down each patient in the reduced MBS files
@@ -220,7 +222,16 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
             output[k] = shared_raw_data[k][0]  # save the sequence
             dfs.loc[k, 'AVG_AGE'] = shared_raw_data[k][1] - dfs.loc[k, 'YOB']  # save the average age
             dfs.loc[k, 'PINSTATE'] = shared_raw_data[k][2]  # save the last pinstate
+
+    # Check for negative class and skip the None column
+    if dfs['SPPLY_DT'].values[0] is None:
+        dfs = dfs[dfs.columns.drop('SPPLY_DT')]
+
     dfs = dfs.dropna()  # get rid of the extra info for the empty sequences
+
+    # Check samples consistency
+    if len(dfs.index.tolist()) != len(output.keys()):
+        print('[!!] Inconsistent Raw data and extra info [!!]')
 
     # Jump one line
     print('\n')

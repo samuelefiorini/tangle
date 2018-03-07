@@ -19,7 +19,8 @@
 # clear; python scripts/extract_sequences.py -sic -r ../../data -ep -s tmp/dump_class_0.csv -nj 8 # Negative examples
 
 # --- Prepare data for matching with CEM --- #
-clear; python scripts/matching_step1.py -s tmp -o tmp/dump
+# clear; python scripts/matching_step1.py -s tmp -o tmp/dump
 
 
 # --- Make {X,y} --- #
+# clear; Rscript scripts/matching_step2.R
