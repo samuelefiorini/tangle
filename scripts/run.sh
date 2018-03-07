@@ -10,12 +10,16 @@
 # python scripts/labels_assignment.py -r ../../data -o tmp/dump -cs 50000 -nj 32 -t 2014
 
 # --- Extract raw data --- #
-clear; python scripts/extract_sequences.py -sic -r ../../data -ep -s tmp/dump_2009_class_1.csv -nj 3
-clear; python scripts/extract_sequences.py -sic -r ../../data -ep -s tmp/dump_2010_class_1.csv -nj 3
-clear; python scripts/extract_sequences.py -sic -r ../../data -ep -s tmp/dump_2011_class_1.csv -nj 3
-clear; python scripts/extract_sequences.py -sic -r ../../data -ep -s tmp/dump_2012_class_1.csv -nj 3
-clear; python scripts/extract_sequences.py -sic -r ../../data -ep -s tmp/dump_2013_class_1.csv -nj 3
-clear; python scripts/extract_sequences.py -sic -r ../../data -ep -s tmp/dump_2014_class_1.csv -nj 3
-clear; python scripts/extract_sequences.py -sic -r ../../data -ep -s tmp/dump_class_0.csv -nj 8 # Negative examples
+# clear; python scripts/extract_sequences.py -sic -r ../../data -ep -s tmp/dump_2009_class_1.csv -nj 3
+# clear; python scripts/extract_sequences.py -sic -r ../../data -ep -s tmp/dump_2010_class_1.csv -nj 3
+# clear; python scripts/extract_sequences.py -sic -r ../../data -ep -s tmp/dump_2011_class_1.csv -nj 3
+# clear; python scripts/extract_sequences.py -sic -r ../../data -ep -s tmp/dump_2012_class_1.csv -nj 3
+# clear; python scripts/extract_sequences.py -sic -r ../../data -ep -s tmp/dump_2013_class_1.csv -nj 3
+# clear; python scripts/extract_sequences.py -sic -r ../../data -ep -s tmp/dump_2014_class_1.csv -nj 3
+# clear; python scripts/extract_sequences.py -sic -r ../../data -ep -s tmp/dump_class_0.csv -nj 8 # Negative examples
+
+# --- Prepare data for matching with CEM --- #
+clear; python scripts/matching_step1.py --sic -r tmp -o dump
+
 
 # --- Make {X,y} --- #

@@ -95,9 +95,6 @@ def parse_arguments():
                         help='Skip the input check (default=False).')
     parser.add_argument('-nj', '--n_jobs', type=int,
                         help='The number of processes to use.', default=4)
-    # parser.add_argument('-cs', '--chunk_size', type=int,
-    #                     help='The numer of rows each process has access to.',
-    #                     default=1000)
     args = parser.parse_args()
     return args
 
