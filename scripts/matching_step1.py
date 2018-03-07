@@ -70,10 +70,16 @@ def main():
     cem_table = pd.DataFrame(columns=['AVG_AGE', 'SEX', 'PINSTATE',
                                       'SEQ_LENGTH', 'CLASS'])
 
+    # Define the PINSTATE map
+    pinstate_map = {1.: 'ACT+NSW', 2.: 'VIC+TAS',
+                    3.: 'NT+SA', 4.: 'QLD', 5.: 'WA'}
+
     # Let's add the positive samples to the CEM table
     for f in tqdm(pos_rd_files, desc='Processing Class 1'):
         dump = pkl.load(open(f, 'rb'))
         raw_data, extra_info = dump['raw_data'], dump['extra_info']
+        # Apply the PINSTATE map
+        extra_info.loc[:, 'PINSTATE'] = [pinstate_map[x] for x in extra_info['PINSTATE'].values]
         # Extract sequence length
         extra_info['SEQ_LENGTH'] = [len(raw_data[k]) for k in raw_data.keys()]
         extra_info['CLASS'] = 1  # fix the class label
@@ -84,6 +90,9 @@ def main():
     for f in tqdm(neg_rd_files, desc='Processing Class 0'):
         dump = pkl.load(open(f, 'rb'))
         raw_data, extra_info = dump['raw_data'], dump['extra_info']
+        # Apply the PINSTATE map
+        extra_info.loc[:, 'PINSTATE'] = [pinstate_map[x] for x in extra_info['PINSTATE'].values]
+        # Extract sequence length
         extra_info['SEQ_LENGTH'] = [len(raw_data[k]) for k in raw_data.keys()]
         extra_info['CLASS'] = 0  # fix the class label
         # Update cem_table
