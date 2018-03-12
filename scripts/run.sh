@@ -2,12 +2,12 @@
 # Run main scripts
 
 # --- Assign labels --- #
-clear; python scripts/labels_assignment.py -r ../../data -o tmp/dump -m -cs 100000 -nj 32 -t 2009
-# python scripts/labels_assignment.py -r ../../data -o tmp/dump -m -cs 50000 -nj 32 -t 2010
-# python scripts/labels_assignment.py -r ../../data -o tmp/dump -m -cs 50000 -nj 32 -t 2011
-# python scripts/labels_assignment.py -r ../../data -o tmp/dump -m -cs 50000 -nj 32 -t 2012
-# python scripts/labels_assignment.py -r ../../data -o tmp/dump -m -cs 50000 -nj 32 -t 2013
-# python scripts/labels_assignment.py -r ../../data -o tmp/dump -m -cs 50000 -nj 32 -t 2014
+clear; python scripts/labels_assignment.py -r ../../data -o tmp/dump -m -nj 1 -t 2009
+# python scripts/labels_assignment.py -r ../../data -o tmp/dump -m -nj 32 -t 2010
+# python scripts/labels_assignment.py -r ../../data -o tmp/dump -m -nj 32 -t 2011
+# python scripts/labels_assignment.py -r ../../data -o tmp/dump -m -nj 32 -t 2012
+# python scripts/labels_assignment.py -r ../../data -o tmp/dump -m -nj 32 -t 2013
+# python scripts/labels_assignment.py -r ../../data -o tmp/dump -m -nj 32 -t 2014
 
 # --- Extract raw data --- #
 # clear; python scripts/extract_sequences.py -sic -r ../../data -ep -s tmp/dump_2009_class_1.csv -nj 3

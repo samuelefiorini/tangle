@@ -52,9 +52,9 @@ def parse_arguments():
                         help='Skip the input check (default=False).')
     parser.add_argument('-nj', '--n_jobs', type=int,
                         help='The number of processes to use.', default=4)
-    parser.add_argument('-cs', '--chunk_size', type=int,
-                        help='The numer of rows each process has access to.',
-                        default=1000)
+    # parser.add_argument('-cs', '--chunk_size', type=int,
+    #                     help='The numer of rows each process has access to.',
+    #                     default=1000)
     args = parser.parse_args()
     return args
 
@@ -90,7 +90,7 @@ def main():
     print('* Target year: {}'.format(args.target_year))
     print('* Output files: {}.[pkl, csv, ...]'.format(args.output))
     print('* Number of jobs: {}'.format(args.n_jobs))
-    print('* Chunk size: {}'.format(args.chunk_size))
+    # print('* Chunk size: {}'.format(args.chunk_size))
     print('-------------------------------------------------------------------')
 
     # PBS 10% dataset files
@@ -141,7 +141,7 @@ def main():
         print('* Looking for subjects on diabete control drugs ...')  # progress bar embedded
         dd = d_utils.find_diabetics(pbs_files_fullpath,
                                     filter_copayments=False,
-                                    chunksize=args.chunk_size,
+                                    # chunksize=args.chunk_size,
                                     metformin=args.metformin,
                                     n_jobs=args.n_jobs)
         print('\n* Saving {} '.format(filename), end=' ')

@@ -11,6 +11,8 @@ import pandas as pd
 from mbspbs10pc import __path__ as home
 from tqdm import tqdm
 
+___PBS_FILES_DICT__ = dict()
+
 
 def find_positive_samples(dd, cc, target_year=2012):
     """Filter the population of interest according to the input target year.
@@ -111,7 +113,7 @@ def find_diabetics(pbs_files, filter_copayments=False, metformin=False,
     metformin: bool,
         When True, find the two additional labels: MET_ONLY and MET_AFTER.
 
-    chunksize: integer
+    chunksize: integer, [DEPRECATED]
         The number of rows the PBS file should be split into.
 
     n_jobs: integer
@@ -149,6 +151,14 @@ def find_diabetics(pbs_files, filter_copayments=False, metformin=False,
     else:
         met_items = None
 
+    # Load the PBS data in a global variable
+    global ___PBS_FILES_DICT__
+    for pbs in tqdm(pbs_files, desc='PBS files loading'):
+        dd = pd.read_csv(pbs, header=0,
+                         usecols=['ITM_CD', 'PTNT_ID', 'SPPLY_DT',
+                                  'PTNT_CNTRBTN_AMT', 'BNFT_AMT'], engine='c')
+        ___PBS_FILES_DICT__[pbs] = dd
+
     # Itereate on the pbs files and get the index of the individuals that
     # were prescribed to diabes drugs
     index = dict()
@@ -169,7 +179,7 @@ def find_diabetics(pbs_files, filter_copayments=False, metformin=False,
     return index
 
 
-def find_diabetes_drugs_users(filename, dd, co_payment=None, met_items=None,
+def find_diabetes_drugs_users(pbs, dd, co_payment=None, met_items=None,
                               chunksize=10, n_jobs=1):
     """Find the diabetes drugs user from a single PBS file.
 
@@ -178,7 +188,7 @@ def find_diabetes_drugs_users(filename, dd, co_payment=None, met_items=None,
 
     Parameters:
     --------------
-    filename: string
+    pbs: string
         PBS file name.
 
     dd: pandas.Series
@@ -191,7 +201,7 @@ def find_diabetes_drugs_users(filename, dd, co_payment=None, met_items=None,
     met_items: set,
         A set containing the PBS items related to metformin.
 
-    chunksize: integer
+    chunksize: integer, [DEPRECATED]
         The number of rows the PBS file should be split into.
 
     n_jobs: integer
@@ -209,20 +219,26 @@ def find_diabetes_drugs_users(filename, dd, co_payment=None, met_items=None,
     results = manager.dict()
     pool = mp.Pool(n_jobs)  # Use n_jobs processes
 
-    reader = pd.read_csv(filename, chunksize=chunksize,
-                         usecols=['ITM_CD', 'PTNT_ID', 'SPPLY_DT',
-                                  'PTNT_CNTRBTN_AMT', 'BNFT_AMT'])
+    # Get the list of UNIQUE patient id
+    ptnt_ids = np.unique(___PBS_FILES_DICT__[pbs]['PTNT_ID'].values.ravel())
+    pin_splits = np.array_split(ptnt_ids, n_jobs)  # PTNT_ID splits
+
+    # reader = pd.read_csv(filename, chunksize=chunksize,
+    #                      usecols=['ITM_CD', 'PTNT_ID', 'SPPLY_DT',
+    #                               'PTNT_CNTRBTN_AMT', 'BNFT_AMT'])
+
     # Submit async jobs
-    jobs = []
-    for i, chunk in enumerate(reader):
-        # process each data frame
-        f = pool.apply_async(process_chunk, [i, chunk, results, dd,
-                                             co_payment, met_items])
-        jobs.append(f)
+    jobs = [pool.apply_async(worker, (i, pbs, pin_splits[i], results, dd, co_payment)) for i in range(len(pin_splits))]
+
+    # jobs = []
+    # for i, chunk in enumerate(reader):
+    #     # process each data frame
+    #     f = pool.apply_async(process_chunk, [i, chunk, results, dd,
+    #                                          co_payment, met_items])
+    #     jobs.append(f)
 
     # Collect jobs
-    for f in jobs:
-        f.get()
+    jobs = [p.get() for p in jobs]
 
     # Collapse the results in a single dictionary
     # having PTNT_ID as index and SPPLY_DT as value
@@ -230,7 +246,7 @@ def find_diabetes_drugs_users(filename, dd, co_payment=None, met_items=None,
     progress = tqdm(
         total=len(results.keys()),
         position=1,  # the next line is ugly, but it is just the year of the PBS
-        desc="Processing PBS-{}".format(os.path.split(filename)[-1].split('_')[-1].split('.')[0]),
+        desc="Processing PBS-{}".format(os.path.split(pbs)[-1].split('_')[-1].split('.')[0]),
     )
     diabetes_drugs_users = dict()
     for k in results.keys():
@@ -242,28 +258,48 @@ def find_diabetes_drugs_users(filename, dd, co_payment=None, met_items=None,
     return diabetes_drugs_users
 
 
-def process_chunk(i, chunk, results, dd, co_payment):
-    """Process chunk of data frame.
+def worker(i, pbs, pin_split, results, dd, co_payment):
+    """Load the info of a given subject id.
 
     When co_payment is not None, PBS items costing less than co_payments are
     filtered out.
     """
-    if co_payment is None:
-        idx = chunk['ITM_CD'].isin(dd)
-    else:
-        idx = np.logical_and(chunk['PTNT_CNTRBTN_AMT']+chunk['BNFT_AMT'] >= co_payment,
-                             chunk['ITM_CD'].isin(dd))
-
-    content = chunk.loc[idx, ['PTNT_ID', 'SPPLY_DT']]
-    content.loc[:, 'SPPLY_DT'] = pd.to_datetime(content['SPPLY_DT'], format='%d%b%Y')
-
     # Prepare the output
     out = dict()  # initialize the empty output dictionary
-    ptnt_ids = np.unique(content['PTNT_ID'].values.ravel())  # get the unique list of patient id
-    for ptnt_id in ptnt_ids:  # and for each patient id
-        tmp = content[content['PTNT_ID'] == ptnt_id]  # extract the corresponding content
-        
-        out[ptnt_id] = tmp['SPPLY_DT'].min()  # and keep only the first one
 
-    if content.shape[0] > 0:  # save only the relevant content
-        results[i] = out  # so content has 'PTNT_ID' as index and 'SPPLY_DT' as value
+    progress = tqdm(
+        total=len(pin_split),
+        position=i,  # the next line is ugly, but it is just the year of the PBS
+        desc="Processing split-{}".format(i),
+        leave=False
+    )
+
+    for pin in pin_split:
+        progress.update(1)
+        # Select only the items of the given user
+        curr_pbs = ___PBS_FILES_DICT__[pbs]
+        chunk = curr_pbs[curr_pbs['PTNT_ID'] == pin]
+
+        # Filter for co-payment if needed
+        if co_payment is None:
+            idx = chunk['ITM_CD'].isin(dd)
+        else:
+            idx = np.logical_and(chunk['PTNT_CNTRBTN_AMT']+chunk['BNFT_AMT'] >= co_payment,
+                                 chunk['ITM_CD'].isin(dd))
+
+        # If thes current patient is diabetic
+        if len(idx) > 0:
+            # Select the relevant information
+            content = chunk.loc[idx, ['SPPLY_DT', 'ITM_CD']]
+            content.loc[:, 'SPPLY_DT'] = pd.to_datetime(content['SPPLY_DT'], format='%d%b%Y')
+
+            # ptnt_ids = np.unique(content['PTNT_ID'].values.ravel())  # get the unique list of patient id
+            # for ptnt_id in ptnt_ids:  # and for each patient id
+            #     tmp = content[content['PTNT_ID'] == ptnt_id]  # extract the corresponding content
+
+            # And save the output
+            idxmin = content['SPPLY_DT'].idxmin() # keep only the first one
+            out[pin] = content.iloc[idxmin, ['SPPLY_DT', 'ITM_CD']]
+
+            if content.shape[0] > 0:  # save only the relevant content
+                results[i] = out  # so content has 'PTNT_ID' as index and 'SPPLY_DT' as value
