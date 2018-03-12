@@ -2,13 +2,22 @@
 """Find concessional subjects in the PBS files.
 
 This script finds continuously and consistently concessional subjects in the
-PBS files (2008 - 2014). In order to be considered continuously and
-consistently concessional, a subject must:
+PBS files (2008 - 2014) that were prescribed to diabetes controlling drugs.
+In order to be considered continuously and consistently concessional, a subject
+must:
 
     1) continuously use the concessional cards, i.e.: they use it for at least
        50% of the observation years,
     2) consistently satisfy the condition at point 1), i.e.: for at least 50%
        of the PBS benefit items each year.
+
+This script will then produce a list of continuously and consistently
+concessional subjects that use diabetes controlling drugs. If the option
+`-m` (or, equivalently `--metformin`) two more labels will be created:
+
+    a) MET_ONLY, i.e.: patients that are using metformin ONLY
+    b) MET_AFTER, i.e.: patients that after a first metformin prescription
+       started to use another diabetes controlling drug.
 """
 
 from __future__ import print_function
@@ -36,6 +45,9 @@ def parse_arguments():
     parser.add_argument('-o', '--output', type=str,
                         help='Ouput file name root.',
                         default=None)
+    parser.add_argument('-m', '--metformin', action='store_true',
+                        help='Assign the metformin-related labels: i.e.: '
+                        'MET_ONLY and MET_AFTER')
     parser.add_argument('-sic', '--skip_input_check', action='store_false',
                         help='Skip the input check (default=False).')
     parser.add_argument('-nj', '--n_jobs', type=int,
@@ -130,6 +142,7 @@ def main():
         dd = d_utils.find_diabetics(pbs_files_fullpath,
                                     filter_copayments=False,
                                     chunksize=args.chunk_size,
+                                    metformin=args.metformin,
                                     n_jobs=args.n_jobs)
         print('\n* Saving {} '.format(filename), end=' ')
         pkl.dump(dd, open(filename, 'wb'))

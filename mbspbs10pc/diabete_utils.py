@@ -93,7 +93,7 @@ def find_negative_samples(pbs_files, dd, cc):
     return list(negative_subjects)
 
 
-def find_diabetics(pbs_files, filter_copayments=True,
+def find_diabetics(pbs_files, filter_copayments=False, metformin=False,
                    chunksize=10, n_jobs=1):
     """Search people using diabetes drugs in input PBS files.
 
@@ -107,6 +107,9 @@ def find_diabetics(pbs_files, filter_copayments=True,
         total cost < copayment(year) will be excluded. This improves
         consistency for entries that are issued after April 2012. This only
         holds for General Beneficiaries.
+
+    metformin: bool,
+        When True, find the two additional labels: MET_ONLY and MET_AFTER.
 
     chunksize: integer
         The number of rows the PBS file should be split into.
@@ -139,6 +142,13 @@ def find_diabetics(pbs_files, filter_copayments=True,
         co_payments = pd.read_csv(os.path.join(home[0], 'data', 'co-payments_08-18.csv'),
                                   header=0, index_col=0, usecols=['DOC', 'GBC'])
 
+    # Load the metformin PBS items
+    if metformin:
+        met_items = set(pd.read_csv(os.path.join(home[0], 'data', 'metformin_items.csv'),
+                                    header=0).values.ravel())
+    else:
+        met_items = None
+
     # Itereate on the pbs files and get the index of the individuals that
     # were prescribed to diabes drugs
     index = dict()
@@ -153,12 +163,13 @@ def find_diabetics(pbs_files, filter_copayments=True,
 
         index[_pbs] = find_diabetes_drugs_users(pbs, dd,
                                                 co_payment=co_payment,
+                                                met_items=met_items,
                                                 chunksize=chunksize,
                                                 n_jobs=n_jobs)
     return index
 
 
-def find_diabetes_drugs_users(filename, dd, co_payment=None,
+def find_diabetes_drugs_users(filename, dd, co_payment=None, met_items=None,
                               chunksize=10, n_jobs=1):
     """Find the diabetes drugs user from a single PBS file.
 
@@ -176,6 +187,9 @@ def find_diabetes_drugs_users(filename, dd, co_payment=None,
     co_payment: numeric (default=None)
         The Co-payment threshold of the current year.
         Source: [http://www.pbs.gov.au/info/healthpro/explanatory-notes/front/fee]
+
+    met_items: set,
+        A set containing the PBS items related to metformin.
 
     chunksize: integer
         The number of rows the PBS file should be split into.
@@ -202,7 +216,8 @@ def find_diabetes_drugs_users(filename, dd, co_payment=None,
     jobs = []
     for i, chunk in enumerate(reader):
         # process each data frame
-        f = pool.apply_async(process_chunk, [i, chunk, results, dd, co_payment])
+        f = pool.apply_async(process_chunk, [i, chunk, results, dd,
+                                             co_payment, met_items])
         jobs.append(f)
 
     # Collect jobs
@@ -247,7 +262,8 @@ def process_chunk(i, chunk, results, dd, co_payment):
     ptnt_ids = np.unique(content['PTNT_ID'].values.ravel())  # get the unique list of patient id
     for ptnt_id in ptnt_ids:  # and for each patient id
         tmp = content[content['PTNT_ID'] == ptnt_id]  # extract the corresponding content
+        
         out[ptnt_id] = tmp['SPPLY_DT'].min()  # and keep only the first one
 
     if content.shape[0] > 0:  # save only the relevant content
-        results[i] = out  # so content has 'PTNT_ID' as inted and 'SPPLY_DT' as value
+        results[i] = out  # so content has 'PTNT_ID' as index and 'SPPLY_DT' as value
