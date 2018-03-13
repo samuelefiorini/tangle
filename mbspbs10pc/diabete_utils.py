@@ -97,8 +97,7 @@ def find_negative_samples(pbs_files, dd, cc):
     return list(negative_subjects)
 
 
-def find_diabetics(pbs_files, filter_copayments=False, metformin=False,
-                   chunksize=10, n_jobs=1):
+def find_diabetics(pbs_files, filter_copayments=False, n_jobs=1):
     """Search people using diabetes drugs in input PBS files.
 
     Parameters:
@@ -112,23 +111,15 @@ def find_diabetics(pbs_files, filter_copayments=False, metformin=False,
         consistency for entries that are issued after April 2012. This only
         holds for General Beneficiaries.
 
-    metformin: bool,
-        When True, find the two additional labels: MET_ONLY and MET_AFTER.
-
-    chunksize: integer, [DEPRECATED]
-        The number of rows the PBS file should be split into.
-
     n_jobs: integer
         The number of processes that have asyncronous access to the input file.
 
     Returns:
     --------------
-    index: dictionary
-        Dictionary having PBS filenames as keys and the corresponding
-        `'PTNT_ID'`s of individuals prescribed to diabete control drug as
-        values.
-
-        E.g.: `{'PBS_SAMPLE_10PCT_2012.csv': [3928691704, 5156241855,...]}`
+    out: dictionary
+        Dictionary of dictionaries as in the following example.
+        E.g.: `{'PBS_SAMPLE_10PCT_2012.csv': {3928691704: pd.DataFrame(), ...}}`
+        each DataFrame has
     """
     # Load the drugs used in diabetes list file
     _dd = pd.read_csv(os.path.join(home[0], 'data', 'drugs_used_in_diabetes.csv'),
@@ -167,11 +158,11 @@ def find_diabetics(pbs_files, filter_copayments=False, metformin=False,
     # were prescribed to diabes drugs
     pbs_progress = tqdm(total=len(pbs_files),
                         position=1,
-                        desc="PBS files processing",
-                        leave=True)
+                        desc="PBS files processing")
 
-    index = dict()
+    out = dict()
     for pbs in sorted(pbs_files):
+        pbs_progress.update(1)
         _pbs = os.path.split(pbs)[-1]  # more visually appealing
 
         if filter_copayments:  # Select the appropriate co-payment threshold
@@ -180,21 +171,16 @@ def find_diabetics(pbs_files, filter_copayments=False, metformin=False,
         else:
             co_payment = None
 
-        index[_pbs] = find_diabetes_drugs_users(pbs,
-                                                co_payment=co_payment,
-                                                met_items=met_items,
-                                                chunksize=chunksize,
-                                                n_jobs=n_jobs)
-        pbs_progress.update(1)
-    
-    return index
+        out[_pbs] = find_diabetes_drugs_users(pbs, co_payment=co_payment,
+                                              n_jobs=n_jobs)
+
+    return out
 
 
-def find_diabetes_drugs_users(pbs, co_payment=None, met_items=None,
-                              chunksize=10, n_jobs=1):
+def find_diabetes_drugs_users(pbs, co_payment=None, n_jobs=1):
     """Find the diabetes drugs user from a single PBS file.
 
-    This function supports parallel asyncronous access to chunks of the input
+    This function supports parallel asyncronous access to the input
     file.
 
     Parameters:
@@ -206,22 +192,15 @@ def find_diabetes_drugs_users(pbs, co_payment=None, met_items=None,
         The Co-payment threshold of the current year.
         Source: [http://www.pbs.gov.au/info/healthpro/explanatory-notes/front/fee]
 
-    met_items: set,
-        A set containing the PBS items related to metformin.
-
-    chunksize: integer, [DEPRECATED]
-        The number of rows the PBS file should be split into.
-
     n_jobs: integer
         The number of processes that have asyncronous access to the input file.
 
     Returns:
     --------------
-    diabetes_drugs_users: dictionary
+    results: dictionary
         The dictionary of unique patients identifiers that were prescribed to
         dibates drugs in the input pbs file. The dictionary has PTNT_ID as index
-        and SPPLY_DT as value. The SPPLY_DT corresponds to the FIRST time the
-        patient is prescribed to the use of any diabetes control drug.
+        and [SPPLY_DT, ITM_CD] as values.
     """
     manager = Manager()
     results = manager.dict()
@@ -271,4 +250,8 @@ def worker(i, pbs, pin_split, results, co_payment):
             chunk.loc[:, 'SPPLY_DT'] = pd.to_datetime(chunk['SPPLY_DT'], format='%d%b%Y')
 
             # so result has 'PTNT_ID' as index and ['SPPLY_DT', 'ITM_CD'] as value
-            results[pin] = chunk[['SPPLY_DT', 'ITM_CD']]
+            # results[pin] = chunk[['SPPLY_DT', 'ITM_CD']].to_dict(orient='index')
+            out = chunk[['SPPLY_DT', 'ITM_CD']]  # FIXME
+            out = {'SPPLY_DT': out['SPPLY_DT'].values.ravel().tolist(),
+                   'ITM_CD': out['ITM_CD'].values.ravel().tolist()}
+            results[pin] = out

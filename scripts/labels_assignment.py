@@ -27,9 +27,10 @@ import cPickle as pkl
 import os
 from datetime import datetime
 
+import joblib as jl
+import pandas as pd
 from mbspbs10pc import concessionals_utils as c_utils
 from mbspbs10pc import diabete_utils as d_utils
-import pandas as pd
 from mbspbs10pc.utils import check_input
 
 
@@ -103,10 +104,10 @@ def main():
         print('* Looking for continuously concessionals ...')
         cont_conc = c_utils.find_continuously_concessionals(pbs_files_fullpath)
         print('* Saving {} '.format(filename), end=' ')
-        pkl.dump(cont_conc, open(filename, 'wb'))
+        jl.dump(cont_conc, open(filename, 'wb'))
         print(u'\u2713')
     else:
-        cont_conc = pkl.load(open(filename, 'rb'))
+        cont_conc = jl.load(open(filename, 'rb'))
     print('* {} Subjects continuously use concessional cards'.format(len(cont_conc)))
 
     # Filter out the subjects that are not using the concessional cards for at
@@ -116,10 +117,10 @@ def main():
         print('* Looking for consistently concessionals ...')
         cons_conc = c_utils.find_consistently_concessionals(pbs_files_fullpath)
         print('* Saving {} '.format(filename), end=' ')
-        pkl.dump(cons_conc, open(filename, 'wb'))
+        jl.dump(cons_conc, open(filename, 'wb'))
         print(u'\u2713')
     else:
-        cons_conc = pkl.load(open(filename, 'rb'))
+        cons_conc = jl.load(open(filename, 'rb'))
     print('* {} Subjects consistently use concessional cards'.format(len(cons_conc)))
 
     # Intersect the two sets and get the consistently and continuous
@@ -128,10 +129,10 @@ def main():
     if not os.path.exists(filename):
         cons_cont_conc = cons_conc.intersection(cont_conc)
         print('* Saving {} '.format(filename), end=' ')
-        pkl.dump(cons_cont_conc, open(filename, 'wb'))
+        jl.dump(cons_cont_conc, open(filename, 'wb'))
         print(u'\u2713')
     else:
-        cons_cont_conc = pkl.load(open(filename, 'rb'))
+        cons_cont_conc = jl.load(open(filename, 'rb'))
     print('* {} Subjects consistently AND continuously '
           'use concessional cards'.format(len(cons_cont_conc)))
 
@@ -142,13 +143,17 @@ def main():
         dd = d_utils.find_diabetics(pbs_files_fullpath,
                                     filter_copayments=False,
                                     # chunksize=args.chunk_size,
-                                    metformin=args.metformin,
                                     n_jobs=args.n_jobs)
         print('\n* Saving {} '.format(filename), end=' ')
-        pkl.dump(dd, open(filename, 'wb'))
+        jl.dump(dd, open(filename, 'wb'))
         print(u'\u2713')
     else:
-        dd = pkl.load(open(filename, 'rb'))
+        dd = jl.load(open(filename, 'rb'))
+
+    ## DEBUG ##
+    import sys
+    sys.exit(0)
+    ## DEBUG ##
 
     # Find, for each year, the number of people that are continuously and
     # consistently using their concessional cards and that STARTED taking

@@ -1,8 +1,12 @@
 #!/bin/bash
 # Run main scripts
 
+# --- Make pkl.gs -- #
+# clear; python scripts/csv2pkl.py -r ../../data_lite -o tmp/lite
+
+
 # --- Assign labels --- #
-clear; python scripts/labels_assignment.py -r ../../data -o tmp/dump1 -m -nj 32 -t 2009
+clear; python scripts/labels_assignment.py -r ../../data_lite -o tmp/dump_lite -m -nj 32 -t 2009
 # python scripts/labels_assignment.py -r ../../data -o tmp/dump -m -nj 32 -t 2010
 # python scripts/labels_assignment.py -r ../../data -o tmp/dump -m -nj 32 -t 2011
 # python scripts/labels_assignment.py -r ../../data -o tmp/dump -m -nj 32 -t 2012
