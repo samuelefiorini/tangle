@@ -150,11 +150,6 @@ def main():
     else:
         dd = pkl.load(open(filename, 'rb'))
 
-    ### DEBUG ###
-    import sys
-    sys.exit(-1)
-    ### DEBUG ###
-
     # Find, for each year, the number of people that are continuously and
     # consistently using their concessional cards and that STARTED taking
     # drugs for diabetes; i.e.: people that are prescribed to diabetes drugs in
@@ -167,11 +162,17 @@ def main():
                                                target_year=args.target_year)
         print('* Saving {}'.format(filename), end=' ')
         pd.DataFrame.from_dict(pos_id, orient='index').rename({0: 'SPPLY_DT'}, axis=1).to_csv(filename)
-        # pd.DataFrame(data=pos_id, columns=['PTNT_ID']).to_csv(filename, index=False)
         print(u'\u2713')
     else:
         pos_id = pd.read_csv(filename, header=0).values.ravel()
     print('* I found {} positive samples'.format(len(pos_id)))
+
+    # Find, among these people, the ones that are on metformin ONLY
+    # TODO
+
+    # Find, among these people, the ones that started on metformin and then
+    # another drug was added
+    # TODO
 
     # Find people that are continuously and consistently concessional users but
     # were NEVER prescribed with diabetes control drugs in the years

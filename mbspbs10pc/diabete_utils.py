@@ -38,9 +38,10 @@ def find_positive_samples(dd, cc, target_year=2012):
         Dictionary having target patient IDs (positive class) as keys and
         SPPLY_DT as values.
     """
+    _dd = dd['PBS_SAMPLE_10PCT_'+str(target_year)+'.csv']
     # Init the postive subjects with the full list of people taking
     # diabetes drugs in the target year
-    positive_subjects = set(dd['PBS_SAMPLE_10PCT_'+str(target_year)+'.csv'].keys())
+    positive_subjects = set(_dd.keys())
     positive_subjects = positive_subjects.intersection(cc)  # keep only the concessionals
 
     for year in np.arange(2008, target_year)[::-1]:
@@ -48,7 +49,13 @@ def find_positive_samples(dd, cc, target_year=2012):
         curr = curr.intersection(cc)  # keep only the concessionals
         positive_subjects = set(filter(lambda x: x not in curr, positive_subjects))
 
-    positive_subjects = {k: dd['PBS_SAMPLE_10PCT_'+str(target_year)+'.csv'][k] for k in list(positive_subjects)}
+    # FIXME:
+    # positive_subjects = {k: dd['PBS_SAMPLE_10PCT_'+str(target_year)+'.csv'][k] for k in list(positive_subjects)}
+    # out = {}
+    # for k in list(positive_subjects): # iterate on the positive subjects
+    #     p = dd['PBS_SAMPLE_10PCT_'+str(target_year)+'.csv'][k]
+    #     out[k] = p['SPPLY_DT'].min()
+    positive_subjects = {k: _dd[k]['SPPLY_DT'].min() for k in list(positive_subjects)}
 
     return positive_subjects
 
@@ -237,9 +244,6 @@ def worker(i, pbs, pin_split, results, co_payment):
     When co_payment is not None, PBS items costing less than co_payments are
     filtered out.
     """
-    # Prepare the output
-    out = dict()  # initialize the empty output dictionary
-
     progress = tqdm(
         total=len(pin_split),
         position=i,
@@ -247,27 +251,22 @@ def worker(i, pbs, pin_split, results, co_payment):
         leave=False
     )
 
+    # Select only the items of the given user
+    curr_pbs = ___PBS_FILES_DICT__[pbs]
+
     for k, pin in enumerate(pin_split):
         if k % 5 == 0: progress.update(5)  # update each 100 iter
 
-        # Select only the items of the given user
-        curr_pbs = ___PBS_FILES_DICT__[pbs]
+        # Get the current pin
         chunk = curr_pbs.loc[curr_pbs['PTNT_ID'] == pin, :]
 
         # Filter for co-payment if needed
         if co_payment is not None:
             chunk = chunk[chunk['PTNT_CNTRBTN_AMT']+chunk['BNFT_AMT'] >= co_payment]
 
-        # Select the relevant information
-        content = chunk[['SPPLY_DT', 'ITM_CD']]
-
         # If the current patient is actually diabetic
-        if len(content) > 0:
-            content.loc[:, 'SPPLY_DT'] = pd.to_datetime(content['SPPLY_DT'], format='%d%b%Y')
+        if len(chunk) > 0:
+            chunk.loc[:, 'SPPLY_DT'] = pd.to_datetime(chunk['SPPLY_DT'], format='%d%b%Y')
 
-            # And save the output
-            idxmin = content['SPPLY_DT'].idxmin() # keep only the first one
-            out[pin] = content.loc[idxmin, ['SPPLY_DT', 'ITM_CD']]
-
-            # if content.shape[0] > 0:  # save only the relevant content
-            results[pin] = out  # so result has 'PTNT_ID' as index and 'SPPLY_DT' as value
+            # so result has 'PTNT_ID' as index and ['SPPLY_DT', 'ITM_CD'] as value
+            results[pin] = chunk[['SPPLY_DT', 'ITM_CD']]
