@@ -6,6 +6,7 @@ from __future__ import print_function
 import argparse
 import datetime
 import os
+import warnings
 
 import pandas as pd
 from mbspbs10pc.utils import check_input
@@ -24,6 +25,9 @@ def parse_arguments():
                         default=None)
     parser.add_argument('-sic', '--skip_input_check', action='store_false',
                         help='Skip the input check (default=False).')
+    parser.add_argument('-cs', '--chunk_size', type=int,
+                        help='The numer of rows each process has access to.',
+                        default=1000)
     args = parser.parse_args()
     return args
 
@@ -44,7 +48,7 @@ def init_main():
     return args
 
 
-def csv2hdf(csv_files, hdf_filename):
+def csv2hdf(csv_files, hdf_filename, chunksize=1000, tag=''):
     """Concatenate the input csv_files and save them in a single HDF5 store.
 
     Parameters:
@@ -56,20 +60,14 @@ def csv2hdf(csv_files, hdf_filename):
         Name of the generated output file
     """
     # Init the empty output table
-    cols = pd.read_csv(csv_files[0], nrows=1, header=0, index_col=0).columns
-    cols = cols.append(pd.Index(['SOURCE']))
-    df = pd.DataFrame(columns=cols)
+    store = pd.HDFStore(hdf_filename)
 
     # Concat everything in a single data frame
-    for csv in tqdm(csv_files):
-        tmp = pd.read_csv(csv, header=0, index_col=0)
-        tmp['SOURCE'] = os.path.split(csv)[-1]
-        df = pd.concat((df, tmp))
-        del tmp  # easy garbage collection
+    for csv in tqdm(csv_files, desc='Loading {}'.format(tag)):
+        for chunk in pd.read_csv(csv, header=0, index_col=0, chunksize=chunksize):
+            store.append(os.path.split(csv)[-1].split('.')[0], chunk)
 
-    print('* Saving {} '.format(hdf_filename), end=' ')
-    df.to_hdf(hdf_filename, 'data', mode='w', format='fixed')
-    print(u'\u2713')
+    store.close()
 
 
 def main():
@@ -80,7 +78,8 @@ def main():
     args = init_main()
 
     print('* Root data folder: {}'.format(args.root))
-    print('* Output files: {}.hdf5'.format(args.output))
+    print('* Output files: {}_*.hdf5'.format(args.output))
+    print('* Chunk size: {}'.format(args.chunk_size))
     print('-------------------------------------------------------------------')
 
     # MBS 10% dataset files
@@ -88,19 +87,21 @@ def main():
     mbs_files_fullpath = [os.path.join(args.root, mbs) for mbs in mbs_files]
 
     # Create the MBS HDF5 store
-    filename = args.output+'_MBS_.h5'
-    csv2hdf(mbs_files_fullpath, hdf_filename=filename)
+    filename = args.output+'_MBS.h5'
+    csv2hdf(mbs_files_fullpath, hdf_filename=filename, tag='MBS')
 
     # PBS 10% dataset files
     pbs_files = filter(lambda x: x.startswith('PBS'), os.listdir(args.root))
     pbs_files_fullpath = [os.path.join(args.root, pbs) for pbs in pbs_files]
 
     # Create the PBS HDF5 store
-    filename = args.output+'_PBS_.h5'
-    csv2hdf(pbs_files_fullpath, hdf_filename=filename)
+    filename = args.output+'_PBS.h5'
+    csv2hdf(pbs_files_fullpath, hdf_filename=filename, tag='PBS')
 
 
 ################################################################################
 
 if __name__ == '__main__':
-    main()
+    with warnings.catch_warnings():  # ignore FutureWarning
+        warnings.simplefilter(action='ignore', category=FutureWarning)
+        main()
