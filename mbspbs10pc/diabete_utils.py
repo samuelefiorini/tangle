@@ -165,8 +165,13 @@ def find_diabetics(pbs_files, filter_copayments=False, metformin=False,
 
     # Itereate on the pbs files and get the index of the individuals that
     # were prescribed to diabes drugs
+    pbs_progress = tqdm(total=len(pbs_files),
+                        position=1,
+                        desc="PBS files processing",
+                        leave=True)
+
     index = dict()
-    for pbs in tqdm(sorted(pbs_files)):
+    for pbs in sorted(pbs_files):
         _pbs = os.path.split(pbs)[-1]  # more visually appealing
 
         if filter_copayments:  # Select the appropriate co-payment threshold
@@ -180,6 +185,8 @@ def find_diabetics(pbs_files, filter_copayments=False, metformin=False,
                                                 met_items=met_items,
                                                 chunksize=chunksize,
                                                 n_jobs=n_jobs)
+        pbs_progress.update(1)
+    
     return index
 
 
@@ -241,7 +248,7 @@ def worker(i, pbs, pin_split, results, co_payment):
     """
     progress = tqdm(
         total=len(pin_split),
-        position=i,
+        position=i+1,
         desc="Processing split-{}".format(i),
         leave=False
     )
