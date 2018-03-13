@@ -4,9 +4,10 @@
 from __future__ import print_function
 
 import argparse
-import datetime
+import joblib as jl
 import os
 import warnings
+from datetime import datetime
 
 import pandas as pd
 from mbspbs10pc.utils import check_input
@@ -25,9 +26,9 @@ def parse_arguments():
                         default=None)
     parser.add_argument('-sic', '--skip_input_check', action='store_false',
                         help='Skip the input check (default=False).')
-    parser.add_argument('-cs', '--chunk_size', type=int,
-                        help='The numer of rows each process has access to.',
-                        default=1000)
+    # parser.add_argument('-cs', '--chunk_size', type=int,
+    #                     help='The numer of rows each process has access to.',
+    #                     default=1E6)
     args = parser.parse_args()
     return args
 
@@ -48,60 +49,71 @@ def init_main():
     return args
 
 
-def csv2hdf(csv_files, hdf_filename, chunksize=1000, tag=''):
-    """Concatenate the input csv_files and save them in a single HDF5 store.
+def csv2dict(csv_files, tag=''):
+    """Concatenate the input csv_files and save them in a single dictionary.
 
     Parameters:
     --------------
     csv_files: list
         List of MBS-PBS csv files.
 
-    hdf_filename: string
-        Name of the generated output file
+    tag: string
+        Optional, default ''.
+
+    Returns:
+    --------------
+    out: dictionary
+        Dictionary containing all the DataFrames.
     """
-    # Init the empty output table
-    store = pd.HDFStore(hdf_filename)
+    # Init the empty output dictionary
+    out = {}
 
-    # Concat everything in a single data frame
+    # Dump everything in a single dictionary
     for csv in tqdm(csv_files, desc='Loading {}'.format(tag)):
-        for chunk in pd.read_csv(csv, header=0, index_col=0, chunksize=chunksize):
-            store.append(os.path.split(csv)[-1].split('.')[0], chunk)
+        key = os.path.split(csv)[-1].split('.')[0]
+        out[key] = pd.read_csv(csv, header=0, index_col=0)
 
-    store.close()
+    return out
 
 
 def main():
     """Main make_hdf5.py routine."""
     print('-------------------------------------------------------------------')
-    print('MBS - PBS 10% dataset utility: make_hdf5.py')
+    print('MBS - PBS 10% dataset utility: csv2pkl.py')
     print('-------------------------------------------------------------------')
     args = init_main()
 
     print('* Root data folder: {}'.format(args.root))
-    print('* Output files: {}_*.hdf5'.format(args.output))
-    print('* Chunk size: {}'.format(args.chunk_size))
+    print('* Output files: {}_*.pkl'.format(args.output))
+    # print('* Chunk size: {}'.format(args.chunk_size))
     print('-------------------------------------------------------------------')
 
     # MBS 10% dataset files
     mbs_files = filter(lambda x: x.startswith('MBS'), os.listdir(args.root))
     mbs_files_fullpath = [os.path.join(args.root, mbs) for mbs in mbs_files]
 
-    # Create the MBS HDF5 store
-    filename = args.output+'_MBS.h5'
-    csv2hdf(mbs_files_fullpath, hdf_filename=filename, tag='MBS')
+    # Create the MBS pkl store
+    filename = args.output+'_MBS.pkl'
+    d = csv2dict(mbs_files_fullpath, tag='MBS')
+    print('* Saving {} '.format(filename), end=' ')
+    jl.dump(d, open(filename, 'wb'))
+    print(u'\u2713')
 
     # PBS 10% dataset files
     pbs_files = filter(lambda x: x.startswith('PBS'), os.listdir(args.root))
     pbs_files_fullpath = [os.path.join(args.root, pbs) for pbs in pbs_files]
 
-    # Create the PBS HDF5 store
-    filename = args.output+'_PBS.h5'
-    csv2hdf(pbs_files_fullpath, hdf_filename=filename, tag='PBS')
+    # Create the PBS pkl store
+    filename = args.output+'_PBS.pkl'
+    print('* Saving {} '.format(filename), end=' ')
+    d = csv2dict(pbs_files_fullpath, tag='PBS')
+    jl.dump(d, open(filename, 'wb'))
+    print(u'\u2713')
 
 
 ################################################################################
 
 if __name__ == '__main__':
-    with warnings.catch_warnings():  # ignore FutureWarning
+    with warnings.catch_warnings():  # ignore FutureWarning (maybe unnecessary) FIXME
         warnings.simplefilter(action='ignore', category=FutureWarning)
         main()
