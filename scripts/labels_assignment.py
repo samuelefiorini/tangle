@@ -80,7 +80,7 @@ def init_main():
 
 
 def main():
-    """Main find_concessionals.py routine."""
+    """Main labels_assignment.py routine."""
     print('-------------------------------------------------------------------')
     print('MBS - PBS 10% dataset utility: labels_assignment.py')
     print('-------------------------------------------------------------------')
@@ -149,6 +149,11 @@ def main():
         print(u'\u2713')
     else:
         dd = pkl.load(open(filename, 'rb'))
+
+    ### DEBUG ###
+    import sys
+    sys.exit(-1)
+    ### DEBUG ###
 
     # Find, for each year, the number of people that are continuously and
     # consistently using their concessional cards and that STARTED taking
