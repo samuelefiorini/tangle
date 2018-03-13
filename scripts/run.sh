@@ -2,7 +2,7 @@
 # Run main scripts
 
 # --- Assign labels --- #
-clear; python scripts/labels_assignment.py -r ../../data -o tmp/dump -m -nj 1 -t 2009
+clear; python scripts/labels_assignment.py -r ../../data -o tmp/dump -m -nj 32 -t 2009
 # python scripts/labels_assignment.py -r ../../data -o tmp/dump -m -nj 32 -t 2010
 # python scripts/labels_assignment.py -r ../../data -o tmp/dump -m -nj 32 -t 2011
 # python scripts/labels_assignment.py -r ../../data -o tmp/dump -m -nj 32 -t 2012
