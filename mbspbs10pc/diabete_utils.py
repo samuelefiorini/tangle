@@ -49,12 +49,7 @@ def find_positive_samples(dd, cc, target_year=2012):
         curr = curr.intersection(cc)  # keep only the concessionals
         positive_subjects = set(filter(lambda x: x not in curr, positive_subjects))
 
-    # FIXME:
-    # positive_subjects = {k: dd['PBS_SAMPLE_10PCT_'+str(target_year)+'.csv'][k] for k in list(positive_subjects)}
-    # out = {}
-    # for k in list(positive_subjects): # iterate on the positive subjects
-    #     p = dd['PBS_SAMPLE_10PCT_'+str(target_year)+'.csv'][k]
-    #     out[k] = p['SPPLY_DT'].min()
+    # Retrieve the list of positive subjects
     positive_subjects = {k: _dd[k]['SPPLY_DT'].min() for k in list(positive_subjects)}
 
     return positive_subjects
