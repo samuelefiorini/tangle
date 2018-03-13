@@ -11,6 +11,7 @@ from mbspbs10pc import __path__ as home
 from tqdm import tqdm
 
 ___PBS_FILES_DICT__ = dict()
+warnings.filterwarnings('ignore')
 
 
 def find_positive_samples(dd, cc, target_year=2012):
@@ -281,14 +282,14 @@ def worker(i, pbs, pin_split, results, co_payment):
 
         # Select only the items of the given user
         curr_pbs = ___PBS_FILES_DICT__[pbs]
-        chunk = curr_pbs[curr_pbs['PTNT_ID'] == pin]
+        chunk = curr_pbs.loc[curr_pbs['PTNT_ID'] == pin, :]
 
         # Filter for co-payment if needed
         if co_payment is not None:
             chunk = chunk[chunk['PTNT_CNTRBTN_AMT']+chunk['BNFT_AMT'] >= co_payment]
 
         # Select the relevant information
-        content = chunk[['SPPLY_DT', 'ITM_CD']].copy()  # this should prevent SettingCopyWarning 
+        content = chunk[['SPPLY_DT', 'ITM_CD']]
 
         # If the current patient is actually diabetic
         if len(content) > 0:
@@ -302,5 +303,5 @@ def worker(i, pbs, pin_split, results, co_payment):
             idxmin = content['SPPLY_DT'].idxmin() # keep only the first one
             out[pin] = content.loc[idxmin, ['SPPLY_DT', 'ITM_CD']]
 
-            if content.shape[0] > 0:  # save only the relevant content
-                results[pin] = out  # so result has 'PTNT_ID' as index and 'SPPLY_DT' as value
+            # if content.shape[0] > 0:  # save only the relevant content
+            results[pin] = out  # so result has 'PTNT_ID' as index and 'SPPLY_DT' as value
