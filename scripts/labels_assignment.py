@@ -179,14 +179,17 @@ def main():
             metonly = pd.read_csv(filename, header=0)
         print('* I found {} samples on metformin only'.format(len(metonly)))
 
-    # DEBUG
-    import sys
-    sys.exit(-1)
-    # DEBUG
-
-    # Find, among these people, the ones that started on metformin and then
-    # another drug was added
-    # TODO
+        # Find, among these people, the ones that started on metformin and then
+        # another drug was added
+        filename = args.output+'_{}_METAFTER_class_1.csv'.format(args.target_year)
+        if not os.path.exists(filename):
+            metafter = d_utils.find_metafter(dd, pos_id, target_year=args.target_year)
+            print('* Saving {}'.format(filename), end=' ')
+            pd.DataFrame.from_dict(metafter, orient='index').rename({0: 'SPPLY_DT'}, axis=1).to_csv(filename)
+            print(u'\u2713')
+        else:
+            metafter = pd.read_csv(filename, header=0)
+        print('* I found {} samples on metformin + other drug'.format(len(metafter)))
 
     # Find people that are continuously and consistently concessional users but
     # were NEVER prescribed with diabetes control drugs in the years
