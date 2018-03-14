@@ -10,11 +10,11 @@ Scripts developed for Python 2.7.
 
 Usage example:
 
-`$ labels_assignment.py --root <ROOT> --skip_input_check --output <PATH> --target_year <YYYY> --chunk_size <CCC> --n_jobs <NNN>`
+`$ labels_assignment.py --root <ROOT> --skip_input_check --metformin --output <PATH> --target_year <YYYY> --n_jobs <NNN>`
 
 or, equivalently:
 
-`$ labels_assignment.py -r <ROOT> -sic -o <PATH> -t <YYYY> -cs <CCC> -nj <NNN>`
+`$ labels_assignment.py -r <ROOT> -sic -m -o <PATH> -t <YYYY> -nj <NNN>`
 
 This script aims at finding the patient identifiers of the positive and negative
 classes, where:
@@ -22,6 +22,10 @@ classes, where:
   their concessional card in the observation years to buy diabetes drugs,
 - negative class (`y = 0`): subjects that continuously and consistently use
   their concessional card but were never prescribed to diabetes control drugs.
+
+ This script also extracts two other labels:
+ `MET_ONLY` - *i.e.*: patients that are using metformin ONLY
+ `MET_AFTER` - *i.e.*: patients that after a first metformin prescription started to use another diabetes controlling drug.
 
 ### - `extract_sequences.py`
 
