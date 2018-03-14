@@ -50,9 +50,13 @@ def find_positive_samples(dd, cc, target_year=2012):
         positive_subjects = set(filter(lambda x: x not in curr, positive_subjects))
 
     # Retrieve the list of positive subjects
-    positive_subjects = {k: _dd[k]['SPPLY_DT'].min() for k in list(positive_subjects)}
-
-    return positive_subjects
+    out = {}
+    for k in list(positive_subjects):
+        # (but change to the correct datetime format first)
+        out[k] = min(map(lambda x: pd.to_datetime(x, format='%d%b%Y'),
+                         _dd[k]['SPPLY_DT']))
+    
+    return out
 
 
 def find_negative_samples(pbs_files, dd, cc):
@@ -156,13 +160,8 @@ def find_diabetics(pbs_files, filter_copayments=False, n_jobs=1):
 
     # Itereate on the pbs files and get the index of the individuals that
     # were prescribed to diabes drugs
-    pbs_progress = tqdm(total=len(pbs_files),
-                        position=1,
-                        desc="PBS files processing")
-
     out = dict()
-    for pbs in sorted(pbs_files):
-        pbs_progress.update(1)
+    for pbs in tqdm(sorted(pbs_files), desc="PBS files processing"):
         _pbs = os.path.split(pbs)[-1]  # more visually appealing
 
         if filter_copayments:  # Select the appropriate co-payment threshold
@@ -247,10 +246,7 @@ def worker(i, pbs, split, results, co_payment):
 
         # If the current patient is actually diabetic in the current year
         if len(chunk) > 0:
-            # change to the correct datetime format
-            # chunk.loc[:, 'SPPLY_DT'] = pd.to_datetime(chunk['SPPLY_DT'], format='%d%b%Y')
-
-            # and save the corresponding info in a way that
+            # save the corresponding info in a way that
             # the dictionary result has 'PTNT_ID' as index and
             # {'SPPLY_DT': [...], 'ITM_CD': [...]} as values
             out = chunk[['SPPLY_DT', 'ITM_CD']]

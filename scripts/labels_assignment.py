@@ -149,11 +149,6 @@ def main():
     else:
         dd = jl.load(open(filename, 'rb'))
 
-    ## DEBUG ##
-    import sys
-    sys.exit(0)
-    ## DEBUG ##
-
     # Find, for each year, the number of people that are continuously and
     # consistently using their concessional cards and that STARTED taking
     # drugs for diabetes; i.e.: people that are prescribed to diabetes drugs in
