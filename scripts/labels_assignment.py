@@ -27,9 +27,10 @@ import cPickle as pkl
 import os
 from datetime import datetime
 
+import joblib as jl
+import pandas as pd
 from mbspbs10pc import concessionals_utils as c_utils
 from mbspbs10pc import diabete_utils as d_utils
-import pandas as pd
 from mbspbs10pc.utils import check_input
 
 
@@ -52,9 +53,9 @@ def parse_arguments():
                         help='Skip the input check (default=False).')
     parser.add_argument('-nj', '--n_jobs', type=int,
                         help='The number of processes to use.', default=4)
-    parser.add_argument('-cs', '--chunk_size', type=int,
-                        help='The numer of rows each process has access to.',
-                        default=1000)
+    # parser.add_argument('-cs', '--chunk_size', type=int,
+    #                     help='The numer of rows each process has access to.',
+    #                     default=1000)
     args = parser.parse_args()
     return args
 
@@ -80,7 +81,7 @@ def init_main():
 
 
 def main():
-    """Main find_concessionals.py routine."""
+    """Main labels_assignment.py routine."""
     print('-------------------------------------------------------------------')
     print('MBS - PBS 10% dataset utility: labels_assignment.py')
     print('-------------------------------------------------------------------')
@@ -90,7 +91,8 @@ def main():
     print('* Target year: {}'.format(args.target_year))
     print('* Output files: {}.[pkl, csv, ...]'.format(args.output))
     print('* Number of jobs: {}'.format(args.n_jobs))
-    print('* Chunk size: {}'.format(args.chunk_size))
+    print('[{}] Metformin labels: {}'.format(*('+', 'ON') if args.metformin else (' ', 'OFF')))
+    # print('* Chunk size: {}'.format(args.chunk_size))
     print('-------------------------------------------------------------------')
 
     # PBS 10% dataset files
@@ -103,10 +105,10 @@ def main():
         print('* Looking for continuously concessionals ...')
         cont_conc = c_utils.find_continuously_concessionals(pbs_files_fullpath)
         print('* Saving {} '.format(filename), end=' ')
-        pkl.dump(cont_conc, open(filename, 'wb'))
+        jl.dump(cont_conc, open(filename, 'wb'))
         print(u'\u2713')
     else:
-        cont_conc = pkl.load(open(filename, 'rb'))
+        cont_conc = jl.load(open(filename, 'rb'))
     print('* {} Subjects continuously use concessional cards'.format(len(cont_conc)))
 
     # Filter out the subjects that are not using the concessional cards for at
@@ -116,10 +118,10 @@ def main():
         print('* Looking for consistently concessionals ...')
         cons_conc = c_utils.find_consistently_concessionals(pbs_files_fullpath)
         print('* Saving {} '.format(filename), end=' ')
-        pkl.dump(cons_conc, open(filename, 'wb'))
+        jl.dump(cons_conc, open(filename, 'wb'))
         print(u'\u2713')
     else:
-        cons_conc = pkl.load(open(filename, 'rb'))
+        cons_conc = jl.load(open(filename, 'rb'))
     print('* {} Subjects consistently use concessional cards'.format(len(cons_conc)))
 
     # Intersect the two sets and get the consistently and continuous
@@ -128,10 +130,10 @@ def main():
     if not os.path.exists(filename):
         cons_cont_conc = cons_conc.intersection(cont_conc)
         print('* Saving {} '.format(filename), end=' ')
-        pkl.dump(cons_cont_conc, open(filename, 'wb'))
+        jl.dump(cons_cont_conc, open(filename, 'wb'))
         print(u'\u2713')
     else:
-        cons_cont_conc = pkl.load(open(filename, 'rb'))
+        cons_cont_conc = jl.load(open(filename, 'rb'))
     print('* {} Subjects consistently AND continuously '
           'use concessional cards'.format(len(cons_cont_conc)))
 
@@ -141,14 +143,12 @@ def main():
         print('* Looking for subjects on diabete control drugs ...')  # progress bar embedded
         dd = d_utils.find_diabetics(pbs_files_fullpath,
                                     filter_copayments=False,
-                                    chunksize=args.chunk_size,
-                                    metformin=args.metformin,
                                     n_jobs=args.n_jobs)
         print('\n* Saving {} '.format(filename), end=' ')
-        pkl.dump(dd, open(filename, 'wb'))
+        jl.dump(dd, open(filename, 'wb'))
         print(u'\u2713')
     else:
-        dd = pkl.load(open(filename, 'rb'))
+        dd = jl.load(open(filename, 'rb'))
 
     # Find, for each year, the number of people that are continuously and
     # consistently using their concessional cards and that STARTED taking
@@ -162,11 +162,34 @@ def main():
                                                target_year=args.target_year)
         print('* Saving {}'.format(filename), end=' ')
         pd.DataFrame.from_dict(pos_id, orient='index').rename({0: 'SPPLY_DT'}, axis=1).to_csv(filename)
-        # pd.DataFrame(data=pos_id, columns=['PTNT_ID']).to_csv(filename, index=False)
         print(u'\u2713')
     else:
-        pos_id = pd.read_csv(filename, header=0).values.ravel()
+        pos_id = pd.read_csv(filename, header=0, index_col=0)
     print('* I found {} positive samples'.format(len(pos_id)))
+
+    # Find, among these people, the ones that are on metformin ONLY
+    if args.metformin:
+        filename = args.output+'_{}_METONLY_class_1.csv'.format(args.target_year)
+        if not os.path.exists(filename):
+            metonly = d_utils.find_metonly(dd, pos_id, target_year=args.target_year)
+            print('* Saving {}'.format(filename), end=' ')
+            pd.DataFrame.from_dict(metonly, orient='index').rename({0: 'SPPLY_DT'}, axis=1).to_csv(filename)
+            print(u'\u2713')
+        else:
+            metonly = pd.read_csv(filename, header=0)
+        print('* I found {} samples on metformin only'.format(len(metonly)))
+
+        # Find, among these people, the ones that started on metformin and then
+        # another drug was added
+        filename = args.output+'_{}_METAFTER_class_1.csv'.format(args.target_year)
+        if not os.path.exists(filename):
+            metafter = d_utils.find_metafter(dd, pos_id, target_year=args.target_year)
+            print('* Saving {}'.format(filename), end=' ')
+            pd.DataFrame.from_dict(metafter, orient='index').rename({0: 'SPPLY_DT'}, axis=1).to_csv(filename)
+            print(u'\u2713')
+        else:
+            metafter = pd.read_csv(filename, header=0)
+        print('* I found {} samples on metformin + other drug'.format(len(metafter)))
 
     # Find people that are continuously and consistently concessional users but
     # were NEVER prescribed with diabetes control drugs in the years
@@ -180,7 +203,7 @@ def main():
         pd.DataFrame(data=neg_id, columns=['PTNT_ID']).to_csv(filename, index=False)
         print(u'\u2713')
     else:
-        neg_id = pd.read_csv(filename, header=0).values.ravel()
+        neg_id = pd.read_csv(filename, header=0, index_col=0)
     print('* I found {} negative samples'.format(len(neg_id)))
 
     # Sanity check: no samples should be in common between positive and negative class
