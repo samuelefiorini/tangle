@@ -161,7 +161,8 @@ def main():
         pos_id = d_utils.find_positive_samples(dd, cons_cont_conc,
                                                target_year=args.target_year)
         print('* Saving {}'.format(filename), end=' ')
-        pd.DataFrame.from_dict(pos_id, orient='index').rename({0: 'SPPLY_DT'}, axis=1).to_csv(filename)
+        pos_id = pd.DataFrame.from_dict(pos_id, orient='index').rename({0: 'SPPLY_DT'}, axis=1)
+        pos_id.to_csv(filename)
         print(u'\u2713')
     else:
         pos_id = pd.read_csv(filename, header=0, index_col=0)
