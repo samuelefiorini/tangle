@@ -142,7 +142,6 @@ def main():
         print('* Looking for subjects on diabete control drugs ...')  # progress bar embedded
         dd = d_utils.find_diabetics(pbs_files_fullpath,
                                     filter_copayments=False,
-                                    # chunksize=args.chunk_size,
                                     n_jobs=args.n_jobs)
         print('\n* Saving {} '.format(filename), end=' ')
         jl.dump(dd, open(filename, 'wb'))

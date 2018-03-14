@@ -138,12 +138,12 @@ def find_diabetics(pbs_files, filter_copayments=False, n_jobs=1):
         co_payments = pd.read_csv(os.path.join(home[0], 'data', 'co-payments_08-18.csv'),
                                   header=0, index_col=0, usecols=['DOC', 'GBC'])
 
-    # Load the metformin PBS items
-    if metformin:
-        met_items = set(pd.read_csv(os.path.join(home[0], 'data', 'metformin_items.csv'),
-                                    header=0).values.ravel())
-    else:
-        met_items = None
+    # # Load the metformin PBS items FIXME
+    # if metformin:
+    #     met_items = set(pd.read_csv(os.path.join(home[0], 'data', 'metformin_items.csv'),
+    #                                 header=0).values.ravel())
+    # else:
+    #     met_items = None
 
     # Load the PBS data in a global variable
     # but keep only the rows relevant with diabete
@@ -216,17 +216,17 @@ def find_diabetes_drugs_users(pbs, co_payment=None, n_jobs=1):
     # Collect jobs
     jobs = [p.get() for p in jobs]
 
-    return results
+    return dict(results)
 
 
-def worker(i, pbs, pin_split, results, co_payment):
+def worker(i, pbs, split, results, co_payment):
     """Load the info of a given subject id.
 
     When co_payment is not None, PBS items costing less than co_payments are
     filtered out.
     """
     progress = tqdm(
-        total=len(pin_split),
+        total=len(split),
         position=i+1,
         desc="Processing split-{}".format(i),
         leave=False
@@ -235,23 +235,24 @@ def worker(i, pbs, pin_split, results, co_payment):
     # Select only the items of the given user
     curr_pbs = ___PBS_FILES_DICT__[pbs]
 
-    for k, pin in enumerate(pin_split):
+    for k, pin in enumerate(split):
         if k % 5 == 0: progress.update(5)  # update each 100 iter
 
-        # Get the current pin
+        # Get the rows corresponding to the current pin
         chunk = curr_pbs.loc[curr_pbs['PTNT_ID'] == pin, :]
 
         # Filter for co-payment if needed
         if co_payment is not None:
             chunk = chunk[chunk['PTNT_CNTRBTN_AMT']+chunk['BNFT_AMT'] >= co_payment]
 
-        # If the current patient is actually diabetic
+        # If the current patient is actually diabetic in the current year
         if len(chunk) > 0:
-            chunk.loc[:, 'SPPLY_DT'] = pd.to_datetime(chunk['SPPLY_DT'], format='%d%b%Y')
+            # change to the correct datetime format
+            # chunk.loc[:, 'SPPLY_DT'] = pd.to_datetime(chunk['SPPLY_DT'], format='%d%b%Y')
 
-            # so result has 'PTNT_ID' as index and ['SPPLY_DT', 'ITM_CD'] as value
-            # results[pin] = chunk[['SPPLY_DT', 'ITM_CD']].to_dict(orient='index')
-            out = chunk[['SPPLY_DT', 'ITM_CD']]  # FIXME
-            out = {'SPPLY_DT': out['SPPLY_DT'].values.ravel().tolist(),
-                   'ITM_CD': out['ITM_CD'].values.ravel().tolist()}
-            results[pin] = out
+            # and save the corresponding info in a way that
+            # the dictionary result has 'PTNT_ID' as index and
+            # {'SPPLY_DT': [...], 'ITM_CD': [...]} as values
+            out = chunk[['SPPLY_DT', 'ITM_CD']]
+            results[pin] = {'SPPLY_DT': out['SPPLY_DT'].values.ravel().tolist(),
+                            'ITM_CD': out['ITM_CD'].values.ravel().tolist()}
