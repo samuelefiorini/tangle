@@ -24,7 +24,9 @@ classes, where:
   their concessional card but were never prescribed to diabetes control drugs.
 
  This script also extracts two other labels:
+
  `MET_ONLY` - *i.e.*: patients that are using metformin ONLY
+ 
  `MET_AFTER` - *i.e.*: patients that after a first metformin prescription started to use another diabetes controlling drug.
 
 ### - `extract_sequences.py`
