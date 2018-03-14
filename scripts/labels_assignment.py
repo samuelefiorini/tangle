@@ -91,6 +91,7 @@ def main():
     print('* Target year: {}'.format(args.target_year))
     print('* Output files: {}.[pkl, csv, ...]'.format(args.output))
     print('* Number of jobs: {}'.format(args.n_jobs))
+    print('[{}] Metformin labels: {}'.format(*('+', 'ON') if args.metformin else (' ', 'OFF')))
     # print('* Chunk size: {}'.format(args.chunk_size))
     print('-------------------------------------------------------------------')
 
@@ -163,11 +164,25 @@ def main():
         pd.DataFrame.from_dict(pos_id, orient='index').rename({0: 'SPPLY_DT'}, axis=1).to_csv(filename)
         print(u'\u2713')
     else:
-        pos_id = pd.read_csv(filename, header=0).values.ravel()
+        pos_id = pd.read_csv(filename, header=0, index_col=0)
     print('* I found {} positive samples'.format(len(pos_id)))
 
     # Find, among these people, the ones that are on metformin ONLY
-    # TODO
+    if args.metformin:
+        filename = args.output+'_{}_METONLY_class_1.csv'.format(args.target_year)
+        if not os.path.exists(filename):
+            metonly = d_utils.find_metonly(dd, pos_id, target_year=args.target_year)
+            print('* Saving {}'.format(filename), end=' ')
+            pd.DataFrame.from_dict(metonly, orient='index').rename({0: 'SPPLY_DT'}, axis=1).to_csv(filename)
+            print(u'\u2713')
+        else:
+            metonly = pd.read_csv(filename, header=0)
+        print('* I found {} samples on metformin only'.format(len(metonly)))
+
+    # DEBUG
+    import sys
+    sys.exit(-1)
+    # DEBUG
 
     # Find, among these people, the ones that started on metformin and then
     # another drug was added
@@ -185,7 +200,7 @@ def main():
         pd.DataFrame(data=neg_id, columns=['PTNT_ID']).to_csv(filename, index=False)
         print(u'\u2713')
     else:
-        neg_id = pd.read_csv(filename, header=0).values.ravel()
+        neg_id = pd.read_csv(filename, header=0, index_col=0)
     print('* I found {} negative samples'.format(len(neg_id)))
 
     # Sanity check: no samples should be in common between positive and negative class

@@ -14,6 +14,62 @@ ___PBS_FILES_DICT__ = dict()
 warnings.filterwarnings('ignore')
 
 
+def find_metonly(dd, pos_id, target_year=2012):
+    """"Find the people on metformin only.
+
+    Parameters:
+    --------------
+    dd: dictionary
+        The output of find_diabetics().
+
+    pos_id: pd.DataFrame
+        The DataFrame generated from the output of find_positive_samples().
+
+    target_year: integer (default=2012)
+        The target year
+
+    Returns:
+    --------------
+    metonly: dictionary
+        Dictionary having target patient IDs (metformin only) as keys and
+        SPPLY_DT as values.
+    """
+    # Take only the relevant dd values
+    _dd = dd['PBS_SAMPLE_10PCT_'+str(target_year)+'.csv']
+
+    # Load the metformin items
+    met_items = set(pd.read_csv(os.path.join(home[0], 'data', 'metformin_items.csv'),
+                    header=0).values.ravel())
+
+    # Build the DataFrame of interest
+    df = pd.DataFrame(columns=['PTNT_ID', 'ITM_CD', 'SPPLY_DT'])
+
+    # Iterate on the positive indexes and fill up the data frame
+    i = 0
+    for idx in pos_id.index:
+        for itm, dt in zip(_dd[idx]['ITM_CD'], _dd[idx]['SPPLY_DT']):
+            df.loc[i, 'PTNT_ID'] = idx
+            df.loc[i, 'ITM_CD'] = itm
+            df.loc[i, 'SPPLY_DT'] = dt
+            i += 1
+
+    # Keep the pantients in metformin ONLY
+    metonly = []
+    for idx in df['PTNT_ID']:
+        items = df.loc[df['PTNT_ID'] == idx, 'ITM_CD'].values.ravel().tolist()
+        if set(items).issubset(met_items):
+            metonly.append(idx)
+
+    # Retrieve the metonly subjects and create the output dictionary
+    out = {}
+    for idx in metonly:
+        # (but change to the correct datetime format first)
+        out[idx] = min(map(lambda x: pd.to_datetime(x, format='%d%b%Y'),
+                           df.loc[df['PTNT_ID'] == idx, 'SPPLY_DT']))
+
+    return out
+
+
 def find_positive_samples(dd, cc, target_year=2012):
     """Filter the population of interest according to the input target year.
 
@@ -55,7 +111,7 @@ def find_positive_samples(dd, cc, target_year=2012):
         # (but change to the correct datetime format first)
         out[k] = min(map(lambda x: pd.to_datetime(x, format='%d%b%Y'),
                          _dd[k]['SPPLY_DT']))
-    
+
     return out
 
 
@@ -141,13 +197,6 @@ def find_diabetics(pbs_files, filter_copayments=False, n_jobs=1):
     if filter_copayments:
         co_payments = pd.read_csv(os.path.join(home[0], 'data', 'co-payments_08-18.csv'),
                                   header=0, index_col=0, usecols=['DOC', 'GBC'])
-
-    # # Load the metformin PBS items FIXME
-    # if metformin:
-    #     met_items = set(pd.read_csv(os.path.join(home[0], 'data', 'metformin_items.csv'),
-    #                                 header=0).values.ravel())
-    # else:
-    #     met_items = None
 
     # Load the PBS data in a global variable
     # but keep only the rows relevant with diabete
