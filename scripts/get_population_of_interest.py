@@ -116,7 +116,7 @@ def main():
         jl.dump(ccc, open(filename, 'wb'))
         print(u'\u2713')
     else:
-        cons_cont_conc = jl.load(open(filename, 'rb'))
+        ccc = jl.load(open(filename, 'rb'))
     print('* {} Subjects consistently AND continuously '
           'use concessional cards'.format(len(ccc)))
 
