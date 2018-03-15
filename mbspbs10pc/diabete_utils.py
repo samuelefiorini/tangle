@@ -5,7 +5,6 @@ import warnings
 import numpy as np
 import pandas as pd
 from mbspbs10pc import __path__ as home
-from mbspbs10pc.utils import flatten
 from tqdm import tqdm
 
 warnings.filterwarnings('ignore')
@@ -107,9 +106,6 @@ def find_metonly(dd, pos_id, target_year=2012):
         Dictionary having target patient IDs (metformin only) as keys and
         SPPLY_DT as values.
     """
-    # Take only the relevant dd values
-    _dd = dd['PBS_SAMPLE_10PCT_'+str(target_year)+'.csv']
-
     # Load the metformin items
     met_items = set(pd.read_csv(os.path.join(home[0], 'data', 'metformin_items.csv'),
                     header=0).values.ravel())
@@ -156,13 +152,8 @@ def find_diabetics(pbs_files, ccc=set()):
 
     Returns:
     --------------
-    out: dictionary
-        Dictionary of DataFrames as in the following example.
-        E.g.: `{'PBS_SAMPLE_10PCT_2012.csv': ['ITM_CD', 'PTNT_ID', 'SPPLY_DT'], ...}`
-
-    subjs: set
-        The set containing the continuously and consitently concessional
-        diabetic subjects.
+    df: pandas.DataFrame
+        Table containing only the records of ccc using diabetics drugs.
     """
     # Load the drugs used in diabetes list file
     _dd = pd.read_csv(os.path.join(home[0], 'data', 'drugs_used_in_diabetes.csv'),
@@ -176,17 +167,18 @@ def find_diabetics(pbs_files, ccc=set()):
         else:
             dd.add(item)
 
-    # Load the PBS data in a global variable
-    # but keep only the rows relevant with diabete
-    out = dict()
-    subjs = list()
+    # Find the ccc diabetics
+    tmp = dict()
     for pbs in tqdm(pbs_files, desc='PBS files loading', leave=False):
         pbs_dd = pd.read_csv(pbs, header=0, engine='c',
                              usecols=['ITM_CD', 'PTNT_ID', 'SPPLY_DT'])
         pbs_dd = pbs_dd[pbs_dd['PTNT_ID'].isin(ccc)]  # keep only ccc
         pbs_dd = pbs_dd[pbs_dd['ITM_CD'].isin(dd)]  # keep only diabetics
-        subjs.append(pbs_dd['PTNT_ID'].values.ravel().tolist())
-        out[pbs] = pbs_dd
-    subjs = set(flatten(subjs))
+        tmp[pbs] = pbs_dd
 
-    return out, subjs
+    # Collapse everything into a single output DataFrame
+    df = pd.DataFrame(columns=pbs_dd.columns)
+    for k in dd.keys():
+        df = pd.concat((df, dd[k]))
+
+    return df

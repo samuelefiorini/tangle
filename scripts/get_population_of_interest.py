@@ -120,15 +120,14 @@ def main():
     filename = args.output+'_dd_.pkl'
     if not os.path.exists(filename):
         print('* Looking for subjects on diabete control drugs ...')
-        dd, subjs = d_utils.find_diabetics(pbs_files_fullpath, ccc)
+        dd = d_utils.find_diabetics(pbs_files_fullpath, ccc)
         print('\n* Saving {} '.format(filename), end=' ')
-        jl.dump({'dd': dd, 'subjs': subjs}, open(filename, 'wb'))
+        jl.dump(dd, open(filename, 'wb'))
         print(u'\u2713')
     else:
-        tmp = jl.load(open(filename, 'rb'))
-        dd, subjs = tmp['dd'], tmp['subjs']
+        dd = jl.load(open(filename, 'rb'))
     print('* {} Subjects consistently and continuously concessional '
-          'use diabetes control drugs'.format(len(subjs)))
+          'use diabetes control drugs'.format(len(dd['PTNT_ID'].unique())))
 
 
 ################################################################################
