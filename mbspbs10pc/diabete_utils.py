@@ -178,14 +178,14 @@ def find_diabetics(pbs_files, ccc=set()):
 
     # Load the PBS data in a global variable
     # but keep only the rows relevant with diabete
-    out = {}
-    subjs = []
-    for pbs in tqdm(pbs_files, desc='PBS files loading'):
+    out = dict()
+    subjs = list()
+    for pbs in tqdm(pbs_files, desc='PBS files loading', leave=False):
         pbs_dd = pd.read_csv(pbs, header=0, engine='c',
                              usecols=['ITM_CD', 'PTNT_ID', 'SPPLY_DT'])
         pbs_dd = pbs_dd[pbs_dd['PTNT_ID'].isin(ccc)]  # keep only ccc
         pbs_dd = pbs_dd[pbs_dd['ITM_CD'].isin(dd)]  # keep only diabetics
-        subjs = subjs.append(pbs_dd['PTNT_ID'])
+        subjs.append(pbs_dd['PTNT_ID'].values.ravel().tolist())
         out[pbs] = pbs_dd
     subjs = set(flatten(subjs))
 

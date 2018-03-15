@@ -132,7 +132,7 @@ def main():
     else:
         tmp = jl.load(open(filename, 'rb'))
         dd, subjs = tmp['dd'], tmp['subjs']
-    print('* {} Subjects consistently and continuously concessional'
+    print('* {} Subjects consistently and continuously concessional '
           'use diabetes control drugs'.format(len(subjs)))
 
 
