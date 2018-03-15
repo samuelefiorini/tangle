@@ -13,7 +13,7 @@ library(cem)
 
 main <- function(){
   # Load the data
-  input_file <- "tmp/dump_CEM_table.csv"
+  input_file <- "tmp/metformin_CEM_table.csv"
   df <- read.csv(input_file, header = TRUE, row.names = 1)
   
   # Get number of positive and negative
