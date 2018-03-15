@@ -146,7 +146,7 @@ def find_metonly(dd, pos_id, target_year=2012):
     return out
 
 
-def find_diabetes_drugs_users(pbs, co_payment=None, n_jobs=1):
+def find_diabetes_drugs_users(pbs, n_jobs=1):
     """Find the diabetes drugs user from a single PBS file.
 
     This function supports parallel asyncronous access to the input
@@ -156,10 +156,6 @@ def find_diabetes_drugs_users(pbs, co_payment=None, n_jobs=1):
     --------------
     pbs: string
         PBS file name.
-
-    co_payment: numeric (default=None)
-        The Co-payment threshold of the current year.
-        Source: [http://www.pbs.gov.au/info/healthpro/explanatory-notes/front/fee]
 
     n_jobs: integer
         The number of processes that have asyncronous access to the input file.
@@ -188,13 +184,16 @@ def find_diabetes_drugs_users(pbs, co_payment=None, n_jobs=1):
     return dict(results)
 
 
-def find_diabetics(pbs_files, n_jobs=1):
+def find_diabetics(pbs_files, ccc=set(), n_jobs=1):
     """Search people using diabetes drugs in input PBS files.
 
     Parameters:
     --------------
     pbs_files: list
         List of input PBS filenames.
+
+    ccc: set
+        Set of continuoly and consistently concessional subjects.
 
     n_jobs: integer
         The number of processes that have asyncronous access to the input file.
@@ -224,9 +223,10 @@ def find_diabetics(pbs_files, n_jobs=1):
     global ___PBS_FILES_DICT__
     for pbs in tqdm(pbs_files, desc='PBS files loading'):
         pbs_dd = pd.read_csv(pbs, header=0, engine='c',
-                             usecols=['ITM_CD', 'PTNT_ID', 'SPPLY_DT',
-                                      'PTNT_CNTRBTN_AMT', 'BNFT_AMT'])
-        ___PBS_FILES_DICT__[pbs] = pbs_dd[pbs_dd['ITM_CD'].isin(dd)]
+                             usecols=['ITM_CD', 'PTNT_ID', 'SPPLY_DT'])
+        pbs_dd = pbs_dd[pbs_dd['PTNT_ID'].isin(ccc)]  # keep only ccc
+        pbs_dd = pbs_dd[pbs_dd['ITM_CD'].isin(dd)]  # keep only diabetics
+        ___PBS_FILES_DICT__[pbs] = pbs_dd
 
     # Itereate on the pbs files and get the index of the individuals that
     # were prescribed to diabes drugs
@@ -234,14 +234,7 @@ def find_diabetics(pbs_files, n_jobs=1):
     for pbs in tqdm(sorted(pbs_files), desc="PBS files processing"):
         _pbs = os.path.split(pbs)[-1]  # more visually appealing
 
-        if filter_copayments:  # Select the appropriate co-payment threshold
-            year = int(_pbs.split('_')[-1].split('.')[0])
-            co_payment = co_payments.loc[year]['GBC']
-        else:
-            co_payment = None
-
-        out[_pbs] = find_diabetes_drugs_users(pbs, co_payment=co_payment,
-                                              n_jobs=n_jobs)
+        out[_pbs] = find_diabetes_drugs_users(pbs, n_jobs=n_jobs)
 
     return out
 

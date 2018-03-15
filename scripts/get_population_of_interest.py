@@ -114,9 +114,9 @@ def main():
     # concessional cards users
     filename = args.output+'_cc_.pkl'
     if not os.path.exists(filename):
-        cons_cont_conc = cons_conc.intersection(cont_conc)
+        ccc = cons_conc.intersection(cont_conc)
         print('* Saving {} '.format(filename), end=' ')
-        jl.dump(cons_cont_conc, open(filename, 'wb'))
+        jl.dump(ccc, open(filename, 'wb'))
         print(u'\u2713')
     else:
         cons_cont_conc = jl.load(open(filename, 'rb'))
@@ -124,12 +124,11 @@ def main():
           'use concessional cards'.format(len(cons_cont_conc)))
 
     # --- STEP 4 --- #
-    # Find people on diabetic drugs
+    # Find continuously and consistently concessional people on diabetic drugs
     filename = args.output+'_dd_.pkl'
     if not os.path.exists(filename):
-        print('* Looking for subjects on diabete control drugs ...')  # progress bar embedded
-        dd = d_utils.find_diabetics(pbs_files_fullpath,
-                                    n_jobs=args.n_jobs)
+        print('* Looking for subjects on diabete control drugs ...')
+        dd = d_utils.find_diabetics(pbs_files_fullpath, ccc, n_jobs=args.n_jobs)
         print('\n* Saving {} '.format(filename), end=' ')
         jl.dump(dd, open(filename, 'wb'))
         print(u'\u2713')
