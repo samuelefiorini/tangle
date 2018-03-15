@@ -62,8 +62,11 @@ def main():
     # Get raw data files
     rd_files = filter(lambda x: 'raw_data' in x, os.listdir(args.source))
     pos_rd_files = filter(lambda x: 'class_1' in x, rd_files)
+    # pos_rd_files = filter(lambda x: 'METAFTER' in x, rd_files)
+    # pos_rd_files = filter(lambda x: 'METONLY' in x, rd_files)
     pos_rd_files = [os.path.join(args.source, rd) for rd in pos_rd_files]
     neg_rd_files = filter(lambda x: 'class_0' in x, rd_files)
+    # neg_rd_files = filter(lambda x: 'METONLY' in x, rd_files)
     neg_rd_files = [os.path.join(args.source, rd) for rd in neg_rd_files]
 
     # Init the empty CEM table
