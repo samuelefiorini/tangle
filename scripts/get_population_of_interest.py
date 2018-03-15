@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-"""Assign class labels to subjects in MBSPBS 10% dataset.
+"""Extract population of interest from MBSPBS 10% dataset.
 
 This script finds continuously and consistently concessional subjects in the
-PBS files (2008 - 2014) that were prescribed to metformin.
+PBS files (2008 - 2014) that were prescribed to diabetes control drugs.
 In order to be considered continuously and consistently concessional, a subject
 must:
 
@@ -12,12 +12,7 @@ must:
        of the PBS benefit items each year.
 
 This script will then produce a list of continuously and consistently
-concessional subjects that use metformin. The following labels are assigned:
-
-    * MET_ONLY, i.e.: patients that are using metformin ONLY
-    * MET_AFTER, i.e.: patients that after a first metformin prescription
-      started to use another diabetes controlling drug.
-    * MET_SUB, i.e.: patients that changed from metformin to another drug
+concessional subjects that use diabetes control drugs.
 """
 
 from __future__ import print_function
