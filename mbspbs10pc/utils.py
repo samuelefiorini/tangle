@@ -11,6 +11,12 @@ import numpy as np
 import pandas as pd
 
 
+def flatten(x):
+    """Flatten a list."""
+    return [y for l in x for y in flatten(l)] \
+        if type(x) in (list, np.ndarray) else [x]
+
+
 def check_input(root):
     """Check the input dataset."""
     yrange = range(2008, 2015)

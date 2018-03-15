@@ -1,16 +1,13 @@
 """This module has all the functions needed to detect diabetics."""
-
-import multiprocessing as mp
 import os
 import warnings
-from multiprocessing import Manager
 
 import numpy as np
 import pandas as pd
 from mbspbs10pc import __path__ as home
+from mbspbs10pc.utils import flatten
 from tqdm import tqdm
 
-___PBS_FILES_DICT__ = dict()
 warnings.filterwarnings('ignore')
 
 
@@ -146,45 +143,7 @@ def find_metonly(dd, pos_id, target_year=2012):
     return out
 
 
-def find_diabetes_drugs_users(pbs, n_jobs=1):
-    """Find the diabetes drugs user from a single PBS file.
-
-    This function supports parallel asyncronous access to the input
-    file.
-
-    Parameters:
-    --------------
-    pbs: string
-        PBS file name.
-
-    n_jobs: integer
-        The number of processes that have asyncronous access to the input file.
-
-    Returns:
-    --------------
-    results: dictionary
-        The dictionary of unique patients identifiers that were prescribed to
-        dibates drugs in the input pbs file. The dictionary has PTNT_ID as index
-        and [SPPLY_DT, ITM_CD] as values.
-    """
-    manager = Manager()
-    results = manager.dict()
-    pool = mp.Pool(n_jobs)  # Use n_jobs processes
-
-    # Get the list of UNIQUE patient id
-    ptnt_ids = np.unique(___PBS_FILES_DICT__[pbs]['PTNT_ID'].values.ravel())
-    pin_splits = np.array_split(ptnt_ids, n_jobs)  # PTNT_ID splits
-
-    # Submit async jobs
-    jobs = [pool.apply_async(worker, (i, pbs, pin_splits[i], results, co_payment)) for i in range(len(pin_splits))]
-
-    # Collect jobs
-    jobs = [p.get() for p in jobs]
-
-    return dict(results)
-
-
-def find_diabetics(pbs_files, ccc=set(), n_jobs=1):
+def find_diabetics(pbs_files, ccc=set()):
     """Search people using diabetes drugs in input PBS files.
 
     Parameters:
@@ -195,16 +154,15 @@ def find_diabetics(pbs_files, ccc=set(), n_jobs=1):
     ccc: set
         Set of continuoly and consistently concessional subjects.
 
-    n_jobs: integer
-        The number of processes that have asyncronous access to the input file.
-
     Returns:
     --------------
     out: dictionary
-        Dictionary of dictionaries as in the following example.
-        E.g.: `{'PBS_SAMPLE_10PCT_2012.csv': {3928691704: pd.DataFrame(), ...}}`
-    +
-        each DataFrame has
+        Dictionary of DataFrames as in the following example.
+        E.g.: `{'PBS_SAMPLE_10PCT_2012.csv': ['ITM_CD', 'PTNT_ID', 'SPPLY_DT'], ...}`
+
+    subjs: set
+        The set containing the continuously and consitently concessional
+        diabetic subjects.
     """
     # Load the drugs used in diabetes list file
     _dd = pd.read_csv(os.path.join(home[0], 'data', 'drugs_used_in_diabetes.csv'),
@@ -220,56 +178,15 @@ def find_diabetics(pbs_files, ccc=set(), n_jobs=1):
 
     # Load the PBS data in a global variable
     # but keep only the rows relevant with diabete
-    global ___PBS_FILES_DICT__
+    out = {}
+    subjs = []
     for pbs in tqdm(pbs_files, desc='PBS files loading'):
         pbs_dd = pd.read_csv(pbs, header=0, engine='c',
                              usecols=['ITM_CD', 'PTNT_ID', 'SPPLY_DT'])
         pbs_dd = pbs_dd[pbs_dd['PTNT_ID'].isin(ccc)]  # keep only ccc
         pbs_dd = pbs_dd[pbs_dd['ITM_CD'].isin(dd)]  # keep only diabetics
-        ___PBS_FILES_DICT__[pbs] = pbs_dd
+        subjs = subjs.append(pbs_dd['PTNT_ID'])
+        out[pbs] = pbs_dd
+    subjs = set(flatten(subjs))
 
-    # Itereate on the pbs files and get the index of the individuals that
-    # were prescribed to diabes drugs
-    out = dict()
-    for pbs in tqdm(sorted(pbs_files), desc="PBS files processing"):
-        _pbs = os.path.split(pbs)[-1]  # more visually appealing
-
-        out[_pbs] = find_diabetes_drugs_users(pbs, n_jobs=n_jobs)
-
-    return out
-
-
-def worker(i, pbs, split, results, co_payment):
-    """Load the info of a given subject id.
-
-    When co_payment is not None, PBS items costing less than co_payments are
-    filtered out.
-    """
-    progress = tqdm(
-        total=len(split),
-        position=i+1,
-        desc="Processing split-{}".format(i),
-        leave=False
-    )
-
-    # Select only the items of the given user
-    curr_pbs = ___PBS_FILES_DICT__[pbs]
-
-    for k, pin in enumerate(split):
-        if k % 5 == 0: progress.update(5)  # update each 100 iter
-
-        # Get the rows corresponding to the current pin
-        chunk = curr_pbs.loc[curr_pbs['PTNT_ID'] == pin, :]
-
-        # Filter for co-payment if needed
-        if co_payment is not None:
-            chunk = chunk[chunk['PTNT_CNTRBTN_AMT']+chunk['BNFT_AMT'] >= co_payment]
-
-        # If the current patient is actually diabetic in the current year
-        if len(chunk) > 0:
-            # save the corresponding info in a way that
-            # the dictionary result has 'PTNT_ID' as index and
-            # {'SPPLY_DT': [...], 'ITM_CD': [...]} as values
-            out = chunk[['SPPLY_DT', 'ITM_CD']]
-            results[pin] = {'SPPLY_DT': out['SPPLY_DT'].values.ravel().tolist(),
-                            'ITM_CD': out['ITM_CD'].values.ravel().tolist()}
+    return out, subjs

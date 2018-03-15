@@ -3,7 +3,7 @@
 
 # --- Get population of interest --- #
 # Find continuously and consistently concessionals on diabetes
-clear; python scripts/get_population_of_interest.py -r ../../data -o tmp/auxfile -m -nj 32
+clear; python scripts/get_population_of_interest.py -r ../../data -o tmp/auxfile
 
 # --- Extract raw data --- #
 # clear; python scripts/extract_sequences.py -sic -r ../../data -ep -s tmp/dump_2009_class_1.csv -nj 8

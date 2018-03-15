@@ -44,8 +44,6 @@ def parse_arguments():
                         default=None)
     parser.add_argument('-sic', '--skip_input_check', action='store_false',
                         help='Skip the input check (default=False).')
-    parser.add_argument('-nj', '--n_jobs', type=int,
-                        help='The number of processes to use.', default=4)
     args = parser.parse_args()
     return args
 
@@ -75,7 +73,6 @@ def main():
 
     print('* Root data folder: {}'.format(args.root))
     print('* Output files: {}.[pkl, csv, ...]'.format(args.output))
-    print('* Number of jobs: {}'.format(args.n_jobs))
     print('-------------------------------------------------------------------')
 
     # PBS 10% dataset files
@@ -121,19 +118,22 @@ def main():
     else:
         cons_cont_conc = jl.load(open(filename, 'rb'))
     print('* {} Subjects consistently AND continuously '
-          'use concessional cards'.format(len(cons_cont_conc)))
+          'use concessional cards'.format(len(ccc)))
 
     # --- STEP 4 --- #
     # Find continuously and consistently concessional people on diabetic drugs
     filename = args.output+'_dd_.pkl'
     if not os.path.exists(filename):
         print('* Looking for subjects on diabete control drugs ...')
-        dd = d_utils.find_diabetics(pbs_files_fullpath, ccc, n_jobs=args.n_jobs)
+        dd, subjs = d_utils.find_diabetics(pbs_files_fullpath, ccc)
         print('\n* Saving {} '.format(filename), end=' ')
-        jl.dump(dd, open(filename, 'wb'))
+        jl.dump({'dd': dd, 'subjs': subjs}, open(filename, 'wb'))
         print(u'\u2713')
     else:
-        dd = jl.load(open(filename, 'rb'))
+        tmp = jl.load(open(filename, 'rb'))
+        dd, subjs = tmp['dd'], tmp['subjs']
+    print('* {} Subjects consistently and continuously concessional'
+          'use diabetes control drugs'.format(len(subjs)))
 
 
 ################################################################################
