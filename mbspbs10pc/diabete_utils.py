@@ -68,6 +68,7 @@ def find_metafter(dd, pos_id, target_year=2012):
 
     # Iterate on them
     metafter = []
+    spply_dt = []
     for idx in metonce:
         tmp = df.loc[df['PTNT_ID'] == idx, ['ITM_CD', 'SPPLY_DT']]
         # Sort by date
@@ -79,9 +80,12 @@ def find_metafter(dd, pos_id, target_year=2012):
         # it is likely that the patient started to take a new medication
         if len(mask) > 0 and not (mask[0] == 0):
             metafter.append(idx)
+            spply_dt.append(tmp['SPPLY_DT'].values[mask[0]])
+            # use the first non-metformin prescription as supply date
 
     # Retrieve the metafter subjects and create the output dictionary
-    out = {idx: min(df.loc[df['PTNT_ID'] == idx, 'SPPLY_DT']) for idx in metafter}
+    # out = {idx: min(df.loc[df['PTNT_ID'] == idx, 'SPPLY_DT']) for idx in metafter}
+    out = {idx: dt for idx, dt in zip(metafter, spply_dt)}
 
     return out
 
