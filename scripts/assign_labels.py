@@ -5,9 +5,9 @@ This script will then produce a list of continuously and consistently
 concessional subjects that use metformin. The following labels are assigned:
 
     * MET_ONLY, i.e.: patients that are using metformin ONLY
-    * MET_AFTER, i.e.: patients that after a first metformin prescription
+    * MET+X, i.e.: patients that after a first metformin prescription
       started to use another diabetes controlling drug.
-    * MET_SUB, i.e.: patients that changed from metformin to another drug
+    * MET2X, i.e.: patients that changed from metformin to another drug
 """
 
 from __future__ import print_function
@@ -71,6 +71,15 @@ def main():
     print('* Aux files source folder: {}'.format(args.source))
     print('* Output files: {}.[pkl, csv, ...]'.format(args.output))
     print('-------------------------------------------------------------------')
+
+    # Load the diabetic subjects info
+    dd_file = filter(lambda x: '_dd_' in x, os.listdir(args.source))
+    dd_tmp = jl.load(open(dd_file, 'rb'))
+    dd, dd_id = dd_tmp['dd'], dd_tmp['subjs']
+
+    # Init the label file
+    labels = pd.DataFrame(index=dd_id, columns=['METONLY', 'MET+X', 'MET2X'])
+
 
 
 

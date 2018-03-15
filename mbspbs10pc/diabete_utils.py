@@ -167,18 +167,15 @@ def find_diabetics(pbs_files, ccc=set()):
         else:
             dd.add(item)
 
-    # Find the ccc diabetics
-    tmp = dict()
+    # Find the ccc diabetics and save them in a single data frame
+    columns = ['ITM_CD', 'PTNT_ID', 'SPPLY_DT']
+    df = pd.DataFrame(columns=columns)
     for pbs in tqdm(pbs_files, desc='PBS files loading', leave=False):
-        pbs_dd = pd.read_csv(pbs, header=0, engine='c',
-                             usecols=['ITM_CD', 'PTNT_ID', 'SPPLY_DT'])
-        pbs_dd = pbs_dd[pbs_dd['PTNT_ID'].isin(ccc)]  # keep only ccc
-        pbs_dd = pbs_dd[pbs_dd['ITM_CD'].isin(dd)]  # keep only diabetics
-        tmp[pbs] = pbs_dd
-
-    # Collapse everything into a single output DataFrame
-    df = pd.DataFrame(columns=pbs_dd.columns)
-    for k in dd.keys():
-        df = pd.concat((df, dd[k]))
+        pbs_df = pd.read_csv(pbs, header=0, engine='c',
+                             usecols=columns)
+        pbs_df = pbs_df[pbs_df['PTNT_ID'].isin(ccc)]  # keep only ccc
+        pbs_df = pbs_df[pbs_df['ITM_CD'].isin(dd)]  # keep only diabetics
+        df = pd.concat((df, pbs_df))
+    df.loc[:, 'SPPLY_DT'] = pd.to_datetime(df['SPPLY_DT'], format='%d%b%Y')
 
     return df
