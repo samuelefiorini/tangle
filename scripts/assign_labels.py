@@ -14,9 +14,11 @@ from __future__ import print_function
 
 import argparse
 import os
-from datetime import datetime
+# from datetime import datetime
 
 import joblib as jl
+import numpy as np
+import pandas as pd
 from mbspbs10pc import diabete_utils as d_utils
 from mbspbs10pc.utils import check_input
 
@@ -69,16 +71,31 @@ def main():
 
     print('* Root data folder: {}'.format(args.root))
     print('* Aux files source folder: {}'.format(args.source))
-    print('* Output files: {}.[pkl, csv, ...]'.format(args.output))
+    # print('* Output files: {}.[pkl, csv, ...]'.format(args.output))
     print('-------------------------------------------------------------------')
 
     # Load the diabetic subjects info
-    dd_file = filter(lambda x: '_dd_' in x, os.listdir(args.source))
-    dd_tmp = jl.load(open(dd_file, 'rb'))
-    dd, dd_id = dd_tmp['dd'], dd_tmp['subjs']
+    dd_file = filter(lambda x: '_dd_' in x, os.listdir(args.source))[0]
+    print('* Loading {}...'.format(dd_file), end=' ')
+    dd = jl.load(open(os.path.join(args.source, dd_file), 'rb'))
+    print(u'\u2713')
 
     # Init the label file
-    labels = pd.DataFrame(index=dd_id, columns=['METONLY', 'MET+X', 'MET2X'])
+    # METONLY is 1 for meformin only (0 otherwise)
+    # MET+X is 1 for people using both metformin and another drug (0 otherwise)
+    # MET2X is 1 for patients that changed metformin for another drug (0 otherwise)
+    # START_DATE and END_DATE are the sequence exraction date, which are different
+    # according to the label:
+    #           [METONLY] from the first metformin prescription to the end
+    #           [OTHER] from the first metformin to the first non metformin
+    labels = pd.DataFrame(index=np.unique(dd['PTNT_ID']),
+                          columns=['METONLY', 'MET+X', 'MET2X',
+                                   'START_DATE', 'END_DATE'])
+
+    # Find patients on metformin ONLY
+    idx, start_date, end_date = d_utils.find_metonly(dd, n_jobs=32)
+
+    jl.dump([idx, start_date, end_date], open('tmp/asd.pkl', 'wb'))
 
 
 
