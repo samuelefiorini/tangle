@@ -6,10 +6,10 @@
 # clear; python scripts/get_population_of_interest.py -r ../../data -o tmp/auxfile
 
 # --- Assign labels --- #
-clear; python scripts/assign_labels.py -r ../../data -s tmp -o tmp/labels.csv
+# clear; python scripts/assign_labels.py -r ../../data -s tmp -o tmp/labels.csv
 
 # --- Extract raw data --- #
-# clear; python scripts/extract_sequences.py -sic -r ../../data -ep -s tmp/auxfile -nj 8
+clear; python scripts/extract_sequences.py -sic -r ../../data -ep -s tmp/labels.csv -nj 8
 
 # --- Prepare data for matching with CEM --- #
 # clear; python scripts/matching_step1.py -s tmp -o tmp/metformin

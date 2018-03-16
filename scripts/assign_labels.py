@@ -72,7 +72,7 @@ def main():
 
     print('* Root data folder: {}'.format(args.root))
     print('* Aux files source folder: {}'.format(args.source))
-    # print('* Output files: {}.[pkl, csv, ...]'.format(args.output))
+    print('* Output files: {}'.format(args.output))
     print('-------------------------------------------------------------------')
 
     # Load the diabetic subjects info
@@ -123,8 +123,8 @@ def main():
     # Fill the holes
     print('* Evaluating the other samples...')
     idx3, start_date3, end_date3 = d_utils.find_others(dd, met_idx=labels.dropna().index)
-    labels.loc[idx3, 'START_DATE'] = start_date2
-    labels.loc[idx3, 'END_DATE'] = end_date2
+    labels.loc[idx3, 'START_DATE'] = start_date3
+    labels.loc[idx3, 'END_DATE'] = end_date3
     labels.loc[idx3, 'LABEL'] = 'OTHER'
     print('* {} OTHER subjects'.format(len(idx3)), end=' ')
     print(u'\u2713')
