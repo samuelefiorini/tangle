@@ -14,13 +14,14 @@ from __future__ import print_function
 
 import argparse
 import os
-# from datetime import datetime
+from datetime import datetime
 
 import joblib as jl
 import numpy as np
 import pandas as pd
 from mbspbs10pc import diabete_utils as d_utils
 from mbspbs10pc.utils import check_input
+from mbspbs10pc.utils import flatten
 
 
 def parse_arguments():
@@ -33,9 +34,9 @@ def parse_arguments():
     parser.add_argument('-s', '--source', type=str,
                         help='Aux files root folder (default=./tmp).',
                         default=None)
-    # parser.add_argument('-o', '--output', type=str,
-    #                     help='Ouput file name root.',
-    #                     default=None)
+    parser.add_argument('-o', '--output', type=str,
+                        help='Ouput file name root.',
+                        default=None)
     parser.add_argument('-sic', '--skip_input_check', action='store_false',
                         help='Skip the input check (default=False).')
     args = parser.parse_args()
@@ -55,9 +56,9 @@ def init_main():
     if args.source is None:
         args.source = os.path.join('.', 'tmp')
 
-    # # Check output filename
-    # if args.output is None:
-    #     args.output = 'DumpFile'+str(datetime.now())
+    # Check output filename
+    if args.output is None:
+        args.output = 'DumpFile'+str(datetime.now())
 
     return args
 
@@ -81,25 +82,67 @@ def main():
     print(u'\u2713')
 
     # Init the label file
-    # METONLY is 1 for meformin only (0 otherwise)
-    # MET+X is 1 for people using both metformin and another drug (0 otherwise)
-    # MET2X is 1 for patients that changed metformin for another drug (0 otherwise)
+    # the LABEL columns can be:
+    # - METONLY for meformin only
+    # - MET+X for people using both metformin and another drug
+    # - MET2X or patients that changed metformin for another drug
     # START_DATE and END_DATE are the sequence exraction date, which are different
     # according to the label:
     #           [METONLY] from the first metformin prescription to the end
     #           [OTHER] from the first metformin to the first non metformin
     labels = pd.DataFrame(index=np.unique(dd['PTNT_ID']),
-                          columns=['METONLY', 'MET+X', 'MET2X',
-                                   'START_DATE', 'END_DATE'])
+                          columns=['LABEL', 'START_DATE', 'END_DATE'])
 
     # Find patients on metformin ONLY
-    idx, start_date, end_date = d_utils.find_metonly(dd, n_jobs=32)
+    print('* Looking for METONLY...')
+    idx0, start_date0, end_date0 = d_utils.find_metonly(dd)
+    labels.loc[idx0, 'START_DATE'] = start_date0
+    labels.loc[idx0, 'END_DATE'] = end_date0
+    labels.loc[idx0, 'LABEL'] = 'METONLY'
+    print('* {} METONLY subjects'.format(len(idx0)), end=' ')
+    print(u'\u2713')
 
-    jl.dump([idx, start_date, end_date], open('tmp/asd.pkl', 'wb'))
+    # Find patients using both metformin and other drugs
+    print('* Looking for MET+X...')
+    idx1, start_date1, end_date1 = d_utils.find_metx(dd, min_metformin=10)
+    labels.loc[idx1, 'START_DATE'] = start_date1
+    labels.loc[idx1, 'END_DATE'] = end_date1
+    labels.loc[idx1, 'LABEL'] = 'MET+X'
+    print('* {} MET+X subjects'.format(len(idx1)), end=' ')
+    print(u'\u2713')
 
+    # Find patients that changed from metformin to other drugs
+    print('* Looking for MET2X...')
+    idx2, start_date2, end_date2 = d_utils.find_met2x(dd, min_metformin=10)
+    labels.loc[idx2, 'START_DATE'] = start_date2
+    labels.loc[idx2, 'END_DATE'] = end_date2
+    labels.loc[idx2, 'LABEL'] = 'MET2X'
+    print('* {} MET2X subjects'.format(len(idx2)), end=' ')
+    print(u'\u2713')
 
+    # Fill the holes
+    print('* Evaluating the other samples...')
+    idx3, start_date3, end_date3 = d_utils.find_others(dd, met_idx=labels.dropna().index)
+    labels.loc[idx3, 'START_DATE'] = start_date2
+    labels.loc[idx3, 'END_DATE'] = end_date2
+    labels.loc[idx3, 'LABEL'] = 'OTHER'
+    print('* {} OTHER subjects'.format(len(idx3)), end=' ')
+    print(u'\u2713')
 
+    # Sanity checks - for peace of mind -
+    assert(len(set(idx0).intersection(set(idx1))) == 0)
+    assert(len(set(idx0).intersection(set(idx2))) == 0)
+    assert(len(set(idx0).intersection(set(idx3))) == 0)
+    assert(len(set(idx1).intersection(set(idx2))) == 0)
+    assert(len(set(idx1).intersection(set(idx3))) == 0)
+    assert(len(set(idx2).intersection(set(idx3))) == 0)
 
+    # Save the labels
+    ext = '.csv' if not args.output.endswith('.csv') else ''
+    output_filename = args.output + ext
+    print('* Saving {}...'.format(output_filename), end=' ')
+    labels.to_csv(output_filename)
+    print(u'\u2713')
 
 ################################################################################
 

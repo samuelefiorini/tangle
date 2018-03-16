@@ -6,7 +6,7 @@
 # clear; python scripts/get_population_of_interest.py -r ../../data -o tmp/auxfile
 
 # --- Assign labels --- #
-clear; python scripts/assign_labels.py -r ../../data -s tmp/auxfile
+clear; python scripts/assign_labels.py -r ../../data -s tmp -o tmp/labels.csv
 
 # --- Extract raw data --- #
 # clear; python scripts/extract_sequences.py -sic -r ../../data -ep -s tmp/auxfile -nj 8

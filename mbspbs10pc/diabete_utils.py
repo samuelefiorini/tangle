@@ -1,9 +1,7 @@
 """This module has all the functions needed to detect diabetics."""
-import multiprocessing as mp
 import os
 import warnings
 
-import numpy as np
 import pandas as pd
 from mbspbs10pc import __path__ as home
 from tqdm import tqdm
@@ -11,43 +9,171 @@ from tqdm import tqdm
 warnings.filterwarnings('ignore')
 
 
-def find_metafter(dd, pos_id, target_year=2012):
-    """"Find the people on metformin + other drug.
-
-    This function finds the patients that were prescribed to some non-metformin
-    diabetes drug after an initial metformin prescription.
-
-    Remark: There is no difference between someone that changes metformin for a
-    new drug, and someone who end up using both the drugs.
+def find_others(dd, met_idx):
+    """Find the people that changed from metformin to other drugs.
 
     Parameters:
     --------------
     dd: dictionary
         The output of find_diabetics().
 
-    pos_id: pd.DataFrame
-        The DataFrame generated from the output of find_positive_samples().
+    Returns:
+    --------------
+    idx: list
+        `'PTNT_ID'` of people on metformin + other drug.
 
-    target_year: integer (default=2012)
-        The target year
+    start_date: list
+        The first metformin prescription.
+
+    end_date: list
+        The first non-metformin prescription.
+    """
+    ids = dd['PTNT_ID']
+    idx = set(ids) - set(met_idx)
+
+    grouped = dd.groupby(by='PTNT_ID')
+    filtered = grouped.filter(lambda x: x['PTNT_ID'].values[0] in idx).groupby(by='PTNT_ID')
+
+    # Init return items
+    start_date, end_date = list(), list()
+
+    # Build output variables
+    for name, group in tqdm(filtered, desc='Finalizing', leave=False):
+        start_date.append(group['SPPLY_DT'].min().strftime('%Y-%m-%d'))
+        end_date.append(group['SPPLY_DT'].max().strftime('%Y-%m-%d'))
+
+    return idx, start_date, end_date
+
+
+def find_met2x(dd, min_metformin=1):
+    """Find the people that changed from metformin to other drugs.
+
+    Parameters:
+    --------------
+    dd: dictionary
+        The output of find_diabetics().
+
+    min_metformin: int
+        Minimum number of metformin ONLY initial prescriptions.
 
     Returns:
     --------------
-    out: dictionary
-        Dictionary having target patient IDs (metformin + other drug) as keys
-        and SPPLY_DT as values.
+    idx: list
+        `'PTNT_ID'` of people on metformin + other drug.
+
+    start_date: list
+        The first metformin prescription.
+
+    end_date: list
+        The first non-metformin prescription.
     """
-    pass
+    # Load the metformin items
+    metonly = set(pd.read_csv(os.path.join(home[0], 'data', 'metformin_items.csv'),
+                  header=0).values.ravel())
+    metx = set(pd.read_csv(os.path.join(home[0], 'data', 'metformin+x_items.csv'),
+                  header=0).values.ravel())
+
+    def condition(group):
+        if len(group) <= min_metformin:
+            return False
+        else:
+            sorted_group = group.sort_values(by='SPPLY_DT')
+            head = set(sorted_group.head(min_metformin)['ITM_CD'].values) # these must all be metformin
+            tail = set(sorted_group.tail(-min_metformin)['ITM_CD'].values) # there should be NO metformin in here
+
+            cond1 = head.issubset(metonly)
+            cond2 = len(tail.intersection(metonly)) == 0
+            cond3 = len(tail.intersection(metx)) == 0
+
+            return cond1 and cond2 and cond3
+
+    grouped = dd.groupby(by='PTNT_ID')
+    filtered = grouped.filter(condition).groupby(by='PTNT_ID')
+
+    # Init return items
+    idx, start_date, end_date = list(), list(), list()
+
+    # Build output variables
+    for name, group in tqdm(filtered, desc='Finalizing', leave=False):
+        idx.append(name)
+        sorted_group = group.sort_values(by='SPPLY_DT')
+        # first date FIXME: max() added for consistency
+        start_date.append(sorted_group.head(1)['SPPLY_DT'].max().strftime('%Y-%m-%d'))
+        # get the non metformins
+        filtered_group = sorted_group[~sorted_group['ITM_CD'].isin(metonly)]
+        end_date.append(filtered_group['SPPLY_DT'].min().strftime('%Y-%m-%d'))
+
+    return idx, start_date, end_date
 
 
-def worker(i, split, dd, metonly, D):
-    for ptnt_id in tqdm(split, leave=False, desc='Split [{}]'.format(i), position=i):
-        chunk = dd[dd['PTNT_ID'] == ptnt_id]
-        items = set(chunk['ITM_CD'].values.tolist())
-        D[ptnt_id] = chunk['SPPLY_DT'].min() if items.issubset(metonly) else None
+def find_metx(dd, min_metformin=1):
+    """"Find the people on metformin + other drug.
+
+    This function finds the patients that were prescribed to some non-metformin
+    diabetes drug after an initial metformin prescription.
+
+    Parameters:
+    --------------
+    dd: dictionary
+        The output of find_diabetics().
+
+    min_metformin: int
+        Minimum number of metformin ONLY initial prescriptions.
+
+    Returns:
+    --------------
+    idx: list
+        `'PTNT_ID'` of people on metformin + other drug.
+
+    start_date: list
+        The first metformin prescription.
+
+    end_date: list
+        The first non-metformin prescription.
+    """
+    # Load the metformin items
+    metonly = set(pd.read_csv(os.path.join(home[0], 'data', 'metformin_items.csv'),
+                  header=0).values.ravel())
+    metx = set(pd.read_csv(os.path.join(home[0], 'data', 'metformin+x_items.csv'),
+                  header=0).values.ravel())
+
+    def condition(group):
+        """Filtering condition."""
+        if len(group) <= min_metformin:
+            return False
+        else:
+            sorted_group = group.sort_values(by='SPPLY_DT')
+            # these must all be metformin for cond1
+            head = set(sorted_group.head(min_metformin)['ITM_CD'].values)
+            # there should be both in here for cond2
+            tail = set(sorted_group.tail(-min_metformin)['ITM_CD'].values)
+            # implementing conditions
+            cond1 = head.issubset(metonly)
+            cond2 = len(tail.intersection(metonly)) > 0 and len(tail.intersection(metonly)) < len(tail)
+            # handling special case of met+x items introduced after 2014
+            cond3 = len(tail.intersection(metx)) > 0
+            return cond1 and (cond2 or cond3)
+
+    grouped = dd.groupby(by='PTNT_ID')
+    filtered = grouped.filter(condition).groupby(by='PTNT_ID')
+
+    # Init return items
+    idx, start_date, end_date = list(), list(), list()
+
+    # Build output variables
+    for name, group in tqdm(filtered, desc='Finalizing', leave=False):
+        idx.append(name)
+        sorted_group = group.sort_values(by='SPPLY_DT')
+        # first date FIXME: max() added for consistency
+        start_date.append(sorted_group.head(1)['SPPLY_DT'].max().strftime('%Y-%m-%d'))
+        # get the non metformins
+        filtered_group = sorted_group[~sorted_group['ITM_CD'].isin(metonly)]
+        end_date.append(filtered_group['SPPLY_DT'].min().strftime('%Y-%m-%d'))
+
+    return idx, start_date, end_date
 
 
-def find_metonly(dd, n_jobs=1):
+def find_metonly(dd):
     """"Find the people on metformin only.
 
     Parameters:
@@ -55,8 +181,6 @@ def find_metonly(dd, n_jobs=1):
     dd: pandas.DataFrame
         The output of find_diabetics().
 
-    n_jobs: int
-        The number of parallel jobs to run, default = 1.
 
     Returns:
     --------------
@@ -73,26 +197,17 @@ def find_metonly(dd, n_jobs=1):
     metonly = set(pd.read_csv(os.path.join(home[0], 'data', 'metformin_items.csv'),
                   header=0).values.ravel())
 
-    # Parallel processing stuff
-    pool = mp.Pool(n_jobs)
-    manager = mp.Manager()
-    D = manager.dict()
-    ptnt_id_splits = np.array_split(dd['PTNT_ID'].unique(), n_jobs)
-
-    # Submit and collect
-    jobs = [pool.apply_async(worker, (i, split, dd, metonly, D)) for i, split in enumerate(ptnt_id_splits)]
-    jobs = [p.get() for p in jobs]
+    # Filter the metformin only
+    filtered = dd.groupby(by='PTNT_ID').filter(lambda x: set(x['ITM_CD']).issubset(metonly)).groupby(by='PTNT_ID')
 
     # Init return items
     idx, start_date, end_date = list(), list(), list()
 
     # Build output variables
-    results = dict(D)
-    for k in tqdm(results.keys(), desc='Finalizing', leave=False):
-        if results[k] is not None:
-            idx.append(k)
-            start_date.append(results[k])
-            end_date.append('2014-12-31')
+    for name, group in tqdm(filtered, desc='Finalizing', leave=False):
+        idx.append(name)
+        start_date.append(group['SPPLY_DT'].min().strftime('%Y-%m-%d'))
+        end_date.append('2014-12-31')
 
     return idx, start_date, end_date
 
