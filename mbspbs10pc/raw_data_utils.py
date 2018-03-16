@@ -169,21 +169,19 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
     # Step 0: load the source file, the btos4d file and the diabetes drugs file
     dfs = pd.read_csv(source, header=0, index_col=0)
     dfs['PTNT_ID'] = dfs.index  # FIXME: this is LEGACY CODE
-    if 'SPPLY_DT' not in dfs.columns:  # fixing the bug with the negative class
-        dfs['SPPLY_DT'] = None
     btos4d = pd.read_csv(os.path.join(home[0], 'data', 'btos4d.csv'), header=0,
                          usecols=['ITEM', 'BTOS-4D'])
 
     # check weather or not exclude pregnant subjects
     if exclude_pregnancy:
-        pregnancy_items = set(pd.read_csv(os.path.join(home[0], 'data',
-                                                       'pregnancy_items.csv'),
-                                          header=0, usecols=['ITEM']).values.ravel())
+        pregnancy_items = pd.read_csv(os.path.join(home[0], 'data', 'pregnancy_items.csv'),
+                                      header=0, usecols=['ITEM'])
+        pregnancy_items = set(pregnancy_items['ITEM'])
 
     # Step 1: get sex and age
     df_pin_lookout = pd.read_csv(sample_pin_lookout, header=0)
     df_pin_lookout['AGE'] = datetime.datetime.now().year - df_pin_lookout['YOB']  # this is the age as of TODAY
-    dfs = pd.merge(dfs, df_pin_lookout, how='left', left_on='PTNT_ID', right_on='PIN')[['PIN', 'SEX', 'AGE', 'SPPLY_DT', 'YOB']]
+    dfs = pd.merge(dfs, df_pin_lookout, how='left', left_on='PTNT_ID', right_on='PIN')[['PIN', 'SEX', 'AGE', 'START_DATE', 'END_DATE', 'YOB']]
     dfs = dfs.set_index('PIN')  # set PIN as index (easier access below)
     # SPPLY_DT is the date of the FIRST diabetes drug supply
 
@@ -195,6 +193,7 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
     for mbs in tqdm(mbs_files, desc='MBS files loading'):
         dd = pd.read_csv(mbs, header=0, usecols=['PIN', 'ITEM', 'DOS', 'PINSTATE'], engine='c')
         if exclude_pregnancy: dd = dd.loc[~dd['ITEM'].isin(pregnancy_items), :]
+        dd = dd.loc[dd['PIN'].isin(dfs.index), :]  # keep only the relevant samples
         ___MBS_FILES_DICT__[mbs] = pd.merge(dd, btos4d, how='left', on='ITEM')
 
     # This large dictionary is shared across multiple processes
@@ -204,16 +203,13 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
 
     # Split the patietns in n_jobs approximately equal chunks
     pin_splits = np.array_split(dfs.index, n_jobs)  # PIN is the index
-    spply_dt_splits = np.array_split(dfs['SPPLY_DT'].values.ravel(), n_jobs)
 
     # Submit the patient tracking jobs
-    results = [pool.apply_async(worker, (i, pin_splits[i], spply_dt_splits[i], shared_raw_data)) for i in range(len(pin_splits))]
+    results = [pool.apply_async(worker, (i, pin_splits[i], dfs, shared_raw_data)) for i in range(len(pin_splits))]
 
     # And collect the results
     results = [p.get() for p in results]
 
-    # Jump one line
-    print('\n')
 
     # Break-down the raw_data dictionary in its components, i.e.: sequence, avg year
     output = dict()
