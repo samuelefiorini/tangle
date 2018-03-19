@@ -3,13 +3,11 @@ from __future__ import division, print_function
 
 import datetime
 import os
-from functools import partial
 
 import numpy as np
 import pandas as pd
 from mbspbs10pc import __path__ as home
 from mbspbs10pc.concessionals_utils import flatten
-from mbspbs10pc.utils import applyParallel
 from tqdm import tqdm
 
 MIN_SEQ_LENGTH = 10  # threshold for the minimum sequence length
@@ -54,48 +52,6 @@ def timespan_encoding(days):
     return str(enc)
 
 
-def extract_sequence(group, dfs=None):
-    """Extract sequence from group of MBS items.
-
-    This function, in order to be applied to pandas groups, must be wrapped by
-    `functools.partial`. For parallel application see `mbspbs10pc.utils.applyParallel`.
-    """
-    out = pd.DataFrame(columns=['seq', 'avg_year', 'last_pinstate'])  # init output
-    pin = group.PIN.values[0]  # extract the current PIN
-    tmp = group.sort_values(by='DOS')  # sort by DOS
-    start_date = dfs.loc[pin]['START_DATE']  # get start date
-    end_date = dfs.loc[pin]['END_DATE']  # get end date
-    # select sequence timespan
-    tmp = tmp.loc[np.logical_and(tmp['DOS'] >= start_date, tmp['DOS'] <= end_date), :]
-    if tmp.shape[0] > MIN_SEQ_LENGTH:  # keep only non-trivial sequencences
-        # evaluate the first order difference and convert each entry in WEEKS
-        timedeltas = map(lambda x: pd.Timedelta(x).days,
-                         tmp['DOS'].values[1:] - tmp['DOS'].values[:-1])
-        # use the appropriate encoding
-        timedeltas = map(timespan_encoding, timedeltas)
-        # then build the sequence as ['exam', idle-days, 'exam', idle-days, ...]
-        seq = flatten([[btos, dt] for btos, dt in zip(tmp['BTOS-4D'].values, timedeltas)])
-        seq.append(tmp['BTOS-4D'].values.ravel()[-1])  # add the last exam (ignored by zip)
-        # and finally collapse everything down to a string like 'G0G1H...'
-        seq = ''.join(map(str, seq))
-        # compute the average age during the treatment by computing the average year
-        avg_year = np.mean(pd.DatetimeIndex(tmp['DOS'].values.ravel()).year)
-        # extract the last pinstate
-        last_pinstate = tmp['PINSTATE'].values.ravel()[-1]
-        # build up the result
-        out.loc[pin, 'seq'] = seq
-        out.loc[pin, 'avg_year'] = avg_year
-        out.loc[pin, 'last_pinstate'] = last_pinstate
-        # out = (seq, avg_year, last_pinstate)
-    else:
-        # out = (None, None, None)
-        out.loc[pin, 'seq'] = None
-        out.loc[pin, 'avg_year'] = None
-        out.loc[pin, 'last_pinstate'] = None
-
-    return out
-
-
 def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=None, n_jobs=4):
     """Extract the sequences and find the additional features.
 
@@ -124,8 +80,8 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
     Returns:
     --------------
     raw_data: pandas.DataFrame
-        Each index is a PIN and each value is a dictionary like:
-        {'seq': [G0G1D4...], 'avg_year': 2011.256, 'last_pinstate': 1}
+        Having `PIN` as index and `['seq', 'avg_year', 'last_pinstate']` as
+        columns.
     """
     # Step 0: load the source file, the btos4d file and the diabetes drugs file
     dfs = pd.read_csv(source, header=0, index_col=0)
@@ -162,5 +118,42 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
     # Group by PIN (skip empty groups)
     grouped = mbs_df.groupby('PIN').filter(lambda x: len(x) > 1).groupby('PIN')
 
-    return applyParallel(grouped, partial(extract_sequence, dfs=dfs))
-    # return grouped.apply(extract_sequence)
+    def extract_sequence(group): # the variable dfs is local here
+        """Extract sequence from group of MBS items.
+
+        This function, in order to be applied to pandas groups, must be wrapped by
+        `functools.partial`. For parallel application see `mbspbs10pc.utils.applyParallel`.
+        """
+        out = pd.DataFrame(columns=['seq', 'avg_year', 'last_pinstate'])  # init output
+        pin = group.PIN.values[0]  # extract the current PIN
+        tmp = group.sort_values(by='DOS')  # sort by DOS
+        start_date = dfs.loc[pin]['START_DATE']  # get start date
+        end_date = dfs.loc[pin]['END_DATE']  # get end date
+        # select sequence timespan
+        tmp = tmp.loc[np.logical_and(tmp['DOS'] >= start_date, tmp['DOS'] <= end_date), :]
+        if tmp.shape[0] > MIN_SEQ_LENGTH:  # keep only non-trivial sequencences
+            # evaluate the first order difference and convert each entry in WEEKS
+            timedeltas = map(lambda x: pd.Timedelta(x).days,
+                             tmp['DOS'].values[1:] - tmp['DOS'].values[:-1])
+            # use the appropriate encoding
+            timedeltas = map(timespan_encoding, timedeltas)
+            # then build the sequence as ['exam', idle-days, 'exam', idle-days, ...]
+            seq = flatten([[btos, dt] for btos, dt in zip(tmp['BTOS-4D'].values, timedeltas)])
+            seq.append(tmp['BTOS-4D'].values.ravel()[-1])  # add the last exam (ignored by zip)
+            # and finally collapse everything down to a string like 'G0G1H...'
+            seq = ''.join(map(str, seq))
+            # compute the average age during the treatment by computing the average year
+            avg_year = np.mean(pd.DatetimeIndex(tmp['DOS'].values.ravel()).year)
+            # extract the last pinstate
+            last_pinstate = tmp['PINSTATE'].values.ravel()[-1]
+            # build up the result
+            out.loc[pin, 'seq'] = seq
+            out.loc[pin, 'avg_year'] = avg_year
+            out.loc[pin, 'last_pinstate'] = last_pinstate
+        else:
+            out.loc[pin, 'seq'] = np.nan
+            out.loc[pin, 'avg_year'] = np.nan
+            out.loc[pin, 'last_pinstate'] = np.nan
+        return out
+
+    return grouped.apply(extract_sequence).dropna()
