@@ -124,7 +124,6 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
         This function, in order to be applied to pandas groups, must be wrapped by
         `functools.partial`. For parallel application see `mbspbs10pc.utils.applyParallel`.
         """
-        out = pd.DataFrame(columns=['seq', 'avg_year', 'last_pinstate'])  # init output
         pin = group.PIN.values[0]  # extract the current PIN
         tmp = group.sort_values(by='DOS')  # sort by DOS
         start_date = dfs.loc[pin]['START_DATE']  # get start date
@@ -146,14 +145,9 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
             avg_year = np.mean(pd.DatetimeIndex(tmp['DOS'].values.ravel()).year)
             # extract the last pinstate
             last_pinstate = tmp['PINSTATE'].values.ravel()[-1]
-            # build up the result
-            out.loc[pin, 'seq'] = seq
-            out.loc[pin, 'avg_year'] = avg_year
-            out.loc[pin, 'last_pinstate'] = last_pinstate
         else:
-            out.loc[pin, 'seq'] = np.nan
-            out.loc[pin, 'avg_year'] = np.nan
-            out.loc[pin, 'last_pinstate'] = np.nan
-        return out
+            seq, avg_year, last_pinstate = np.nan, np.nan, np.nan
+
+        return pd.Series({'seq': seq, 'avg_year': avg_year, 'last_pinstate': last_pinstate})
 
     return grouped.apply(extract_sequence).dropna()
