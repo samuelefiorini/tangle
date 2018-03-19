@@ -145,9 +145,11 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
             avg_year = np.mean(pd.DatetimeIndex(tmp['DOS'].values.ravel()).year)  - dfs.loc[pin]['YOB']
             # extract the last pinstate
             last_pinstate = tmp['PINSTATE'].values.ravel()[-1]
+            # extract gender
+            sex = dfs.loc[pin]['SEX']
         else:
-            seq, avg_year, last_pinstate = np.nan, np.nan, np.nan
+            seq, avg_year, last_pinstate, sex = np.nan, np.nan, np.nan, np.nan
 
-        return pd.Series({'seq': seq, 'avg_year': avg_year, 'last_pinstate': last_pinstate})
+        return pd.Series({'seq': seq, 'avg_year': avg_year, 'last_pinstate': last_pinstate, 'sex': sex})
 
     return grouped.apply(extract_sequence).dropna()
