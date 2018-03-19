@@ -129,7 +129,6 @@ def main():
     print('* PTNT_ID list: {}'.format(args.source))
     print('* Output files: {}.pkl'.format(args.output))
     print('* Number of jobs: {}'.format(args.n_jobs))
-    # print('* Chunk size: {}'.format(args.chunk_size))
 
     print('[{}] Exclude pregnancy: {}'.format(*('+', 'ON') if args.exclude_pregnancy else (' ', 'OFF')))
     print('-------------------------------------------------------------------')
@@ -148,7 +147,6 @@ def main():
                                                    sample_pin_lookout),
                                       exclude_pregnancy=args.exclude_pregnancy,
                                       source=args.source)
-                                      # n_jobs=args.n_jobs)
         print('* Saving {} '.format(filename), end=' ')
         pkl.dump(raw_data, open(filename, 'wb'))
         print(u'\u2713')
