@@ -8,10 +8,14 @@
 #
 # This script follows the example 3.1 of the CEM vignette.
 
+print('-------------------------------------------------------------------')
+print('MBS - PBS 10% dataset utility: matching_step2.R')
+print('-------------------------------------------------------------------')
+
+# Load the CEM library
+library(cem)
+
 main <- function(){
-  # Load the CEM library
-  library(cem)
-  
   # Load the data
   input_file <- "tmp/metformin_CEM_table.csv"
   df <- read.csv(input_file, header = TRUE, row.names = 1)
@@ -36,10 +40,5 @@ main <- function(){
   # Save matched data frame
   write.csv(df.matched, file = 'tmp/matched_CEM_table.csv')
 }
-
-# Run the main routine
-print('-------------------------------------------------------------------')
-print('MBS - PBS 10% dataset utility: matching_step2.R')
-print('-------------------------------------------------------------------')
 
 main()
