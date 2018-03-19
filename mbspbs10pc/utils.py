@@ -5,10 +5,18 @@ from __future__ import division
 import os
 import warnings
 from collections import Counter
+from multiprocessing import cpu_count
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from joblib import Parallel, delayed
+
+
+def flatten(x):
+    """Flatten a list."""
+    return [y for l in x for y in flatten(l)] \
+        if type(x) in (list, np.ndarray) else [x]
 
 
 def check_input(root):
@@ -68,3 +76,6 @@ def show_most_frequent(x, top_k=25, dpi=100, column=None, **kwargs):
     plt.bar(xaxis, dd.values.ravel())
     plt.xticks(xaxis, dd.index, rotation='vertical')
     plt.title(column)
+
+def applyParallel(grouped, func):
+    return pd.concat(Parallel(n_jobs=cpu_count())(delayed(func)(group) for name, group in grouped))

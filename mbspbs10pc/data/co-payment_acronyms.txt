@@ -1,8 +1,0 @@
-# Co-payment acronyms:
--------------------------
-DOC - Date of Change
-CBCP - Concessional Beneficiaries Copayment Pensioners $
-CBCO - Concessional Beneficiaries Copayment Others $
-CBSNT - Concessional Beneficiaries Safety Net Threshold $
-GBC - General Beneficiaries Copayment $
-GBSNT - General Beneficiaries Safety Net Threshold $

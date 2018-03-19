@@ -9,14 +9,9 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-# __C0C1_THRESH__ = 0.5
+from mbspbs10pc.utils import flatten
+
 __C0C1_THRESH__ = 0.75
-
-
-def flatten(x):
-    """Flatten a list."""
-    return [y for l in x for y in flatten(l)] \
-        if type(x) in (list, np.ndarray) else [x]
 
 
 def find_continuously_concessionals(pbs_files):
@@ -41,7 +36,7 @@ def find_continuously_concessionals(pbs_files):
         warnings.simplefilter(action='ignore', category=FutureWarning)
         # scan the PBS files and select only the two columns of interest and save
         # the unique PTNT_ID of the subjects using C0 or C1 in the current year
-        for pbs in tqdm(pbs_files):
+        for pbs in tqdm(pbs_files, leave=False):
             df = pd.read_csv(pbs, header=0,
                              usecols=['PTNT_ID', 'PTNT_CTGRY_DRVD_CD'])
             _c0c1 = df.loc[df['PTNT_CTGRY_DRVD_CD'].isin(['C0', 'C1'])]['PTNT_ID']
@@ -77,7 +72,7 @@ def find_consistently_concessionals(pbs_files):
     with warnings.catch_warnings():  # ignore FutureWarning
         warnings.simplefilter(action='ignore', category=FutureWarning)
         # scan the PBS files and select only the two columns of interest
-        for pbs in tqdm(pbs_files):
+        for pbs in tqdm(pbs_files, leave=False):
             df = pd.read_csv(pbs, header=0,
                              usecols=['PTNT_ID', 'PTNT_CTGRY_DRVD_CD'])
             # count the number of PBS items of each PTNT_ID
