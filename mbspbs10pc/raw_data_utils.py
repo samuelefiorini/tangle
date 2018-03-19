@@ -80,7 +80,7 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
     Returns:
     --------------
     raw_data: pandas.DataFrame
-        Having `PIN` as index and `['seq', 'avg_year', 'last_pinstate']` as
+        Having `PIN` as index and `['seq', 'avg_age', 'last_pinstate', 'sex']` as
         columns.
     """
     # Step 0: load the source file, the btos4d file and the diabetes drugs file
@@ -142,14 +142,14 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
             # and finally collapse everything down to a string like 'G0G1H...'
             seq = ''.join(map(str, seq))
             # compute the average age during the treatment by computing the average year
-            avg_year = np.mean(pd.DatetimeIndex(tmp['DOS'].values.ravel()).year)  - dfs.loc[pin]['YOB']
+            avg_age = np.mean(pd.DatetimeIndex(tmp['DOS'].values.ravel()).year)  - dfs.loc[pin]['YOB']
             # extract the last pinstate
             last_pinstate = tmp['PINSTATE'].values.ravel()[-1]
             # extract gender
             sex = dfs.loc[pin]['SEX']
         else:
-            seq, avg_year, last_pinstate, sex = np.nan, np.nan, np.nan, np.nan
+            seq, avg_age, last_pinstate, sex = np.nan, np.nan, np.nan, np.nan
 
-        return pd.Series({'seq': seq, 'avg_year': avg_year, 'last_pinstate': last_pinstate, 'sex': sex})
+        return pd.Series({'seq': seq, 'avg_age': avg_age, 'last_pinstate': last_pinstate, 'sex': sex})
 
     return grouped.apply(extract_sequence).dropna()
