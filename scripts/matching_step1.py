@@ -63,20 +63,16 @@ def main():
     rd_file = filter(lambda x: '_raw_data_' in x, os.listdir(args.source))
     rd_file = os.path.join(args.source, rd_file[0])
     rd = jl.load(open(rd_file, 'rb'))
+    idx = rd.index  # handy index list
 
     # Load labels table
     labels = pd.read_csv(os.path.join(args.source, 'labels.csv'),
                          header=0, index_col=0)
-    labels = labels.loc[rd.index, 'LABEL']  # raw data - labels allineated
-
-    print(rd.head())
-    print(labels.head())
-    return
 
     # Init the empty CEM table
     cem_table = pd.DataFrame(columns=['AVG_AGE', 'SEX', 'PINSTATE',
                                       'SEQ_LENGTH', 'CLASS'],
-                             index=rd.index)
+                             index=idx)
 
     # Define the PINSTATE map
     pinstate_map = {1.: 'ACT+NSW', 2.: 'VIC+TAS',
@@ -84,16 +80,22 @@ def main():
 
     # Let's create the CEM table:
     # 1. Apply the PINSTATE map
-    cem_table.loc[:, 'PINSTATE'] = rd['last_pinstate'].map(lambda x: pinstate_map[x])
+    cem_table.loc[idx, 'PINSTATE'] = rd.loc[idx, 'last_pinstate'].map(lambda x: pinstate_map[x])
 
     # 2. Extract sequence length
-    cem_table.loc[:, 'SEQ_LENGTH'] = rd['seq'].apply(lambda x: len(x))
+    cem_table.loc[idx, 'SEQ_LENGTH'] = rd.loc[idx, 'seq'].apply(lambda x: len(x))
 
-    # 3. Get the class label
+    # 3. Get the average age
+    cem_table.loc[idx, 'AVG_AGE'] = rd.loc[idx, 'avg_age']
+
+    # 4. Get gender
+    cem_table.loc[idx, 'SEX'] = rd.loc[idx, 'sex']
+
+    # 5. Get the class label
     class_map = {'OTHER': 0, 'METONLY': 1, 'MET+X': 1, 'MET2X': 1}
-    cem_table.loc[:, 'CLASS'] = labels.map(lambda x: class_map[x])
+    cem_table.loc[:, 'CLASS'] = labels.loc[idx, 'LABEL'].map(lambda x: class_map[x])
 
-    # 4. Finally save outputfile
+    # 6. Finally save outputfile
     tail = '.csv' if not args.output.endswith('.csv') else ''
     filename = args.output+'_CEM_table'+tail
     print('* Saving {} '.format(filename), end=' ')
