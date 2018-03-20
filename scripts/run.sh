@@ -15,4 +15,4 @@
 clear; python scripts/matching_step1.py -s tmp -o tmp/metformin
 
 # --- Match with CEM --- #
-# clear; Rscript scripts/matching_step2.R
+Rscript scripts/matching_step2.R

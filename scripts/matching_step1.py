@@ -92,8 +92,10 @@ def main():
     cem_table.loc[idx, 'SEX'] = rd.loc[idx, 'sex']
 
     # 5. Get the class label
-    class_map = {'OTHER': 0, 'METONLY': 1, 'MET+X': 1, 'MET2X': 1}
+    class_map = {'OTHER': -1, 'METONLY': 0, 'MET+X': 1, 'MET2X': 1}
     cem_table.loc[:, 'CLASS'] = labels.loc[idx, 'LABEL'].map(lambda x: class_map[x])
+    cem_table = cem_table.loc[cem_table['CLASS'] >= 0 ,:] # exclude others
+    print('* n samples: {}'.format(cem_table.shape[0]))
 
     # 6. Finally save outputfile
     tail = '.csv' if not args.output.endswith('.csv') else ''
