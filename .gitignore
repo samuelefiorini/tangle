@@ -7,6 +7,9 @@
 **/__trash
 **/BOW-datasets
 notebooks/*.csv
+notebooks/**/*.csv
+notebooks/**/*.txt
+notebooks/**/*.png
 
 # data
 **/*.npy
