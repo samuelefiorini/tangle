@@ -156,3 +156,5 @@ vignettes/*.pdf
 rsconnect/
 
 \.magicindex\.json
+
+*.h5
