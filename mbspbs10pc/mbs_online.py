@@ -59,7 +59,7 @@ class MBSOnline(object):
         self.item = str(item)
         self.url = 'http://www9.health.gov.au/mbs/search.cfm?'
         self.soup = None
-        self.categories = None
+        self.category = None
         self.group = None
         self.subgroup = None
         self.subheading = None
@@ -76,7 +76,7 @@ class MBSOnline(object):
         """asd."""
         self.soup = self.send_request(sopt='I')
 
-        self.categories = self.set_categories()
+        self.category = self.set_category()
         self.group, self.subgroup, self.subheading = self.set_info()
         self.description = self.set_description()
         dates = self.set_dates()
@@ -95,7 +95,7 @@ class MBSOnline(object):
     def to_frame(self):
         """Generate a pandas.DataFrame with the MBS info extracted."""
         df = pd.DataFrame(index=[self.item])
-        df.loc[self.item, 'Categories'] = self.categories
+        df.loc[self.item, 'Category'] = self.category
         df.loc[self.item, 'Group'] = self.group
         df.loc[self.item, 'Subgroup'] = self.subgroup
         df.loc[self.item, 'Subheading'] = self.subheading
@@ -132,13 +132,11 @@ class MBSOnline(object):
         r = requests.get(self.url, params={'q': self.item, 'sopt': sopt})
         return BeautifulSoup(r.text, 'html.parser')
 
-    def set_categories(self):
+    def set_category(self):
         """Extract the categories from the soup."""
-        categories = []
-        for elem in self.soup.find_all('h3'):
-            if 'category' in elem.text.lower():
-                categories.append(elem.text.split('<')[0])
-        return categories
+        category_elem = filter(lambda x: 'category' in x.text.lower(),
+                               self.soup.find_all('h3'))[0]
+        return category_elem.text.split('<')[0]
 
     def set_info(self):
         """Extract group, subgroup and subheading from the soup."""
@@ -159,7 +157,7 @@ class MBSOnline(object):
         """Extract the item description from the soup."""
         description = None
         for elem in self.soup.find_all('p'):
-            if elem.get('align') =='justify':
+            if elem.get('align') == 'justify':
                 description = elem.text.encode('utf-8').strip()
         return str(description)
 
@@ -179,7 +177,7 @@ class MBSOnline(object):
 
     def get_fees(self):
         """Extract the fees from the soup."""
-        fee = None
+        fee = None  # FIXME is this redundant?
         benefit75 = None
         benefit85 = None
         safety_net = None
