@@ -137,9 +137,7 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
             # use the appropriate encoding
             timedeltas = map(timespan_encoding, timedeltas)
             # then build the sequence as ['exam', idle-days, 'exam', idle-days, ...]
-            # seq = flatten([[btos, dt] for btos, dt in zip(tmp['BTOS-4D'].values, timedeltas)])
-            seq = flatten([[btos, dt] for btos, dt in zip(tmp['ITEM'].values, timedeltas)])
-            # seq.append(tmp['BTOS-4D'].values.ravel()[-1])  # add the last exam (ignored by zip)
+            seq = flatten([[item, dt] for item, dt in zip(tmp['ITEM'].values, timedeltas)])
             seq.append(tmp['ITEM'].values.ravel()[-1])  # add the last exam (ignored by zip)
             # and finally collapse everything down to a string like 'G0G1H...'
             seq = ''.join(map(str, seq))
