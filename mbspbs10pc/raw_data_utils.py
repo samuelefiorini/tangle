@@ -134,8 +134,6 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
             # evaluate the first order difference and convert each entry in WEEKS
             timedeltas = map(lambda x: pd.Timedelta(x).days,
                              tmp['DOS'].values[1:] - tmp['DOS'].values[:-1])
-            # use the appropriate encoding
-            timedeltas = map(timespan_encoding, timedeltas)
             # then build the sequence as ['exam', idle-days, 'exam', idle-days, ...]
             seq = flatten([[item, dt] for item, dt in zip(tmp['ITEM'].values, timedeltas)])
             seq.append(tmp['ITEM'].values.ravel()[-1])  # add the last exam (ignored by zip)
