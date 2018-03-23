@@ -87,6 +87,7 @@ class MBSOnline(object):
         if 'Item Start Date:' in dates:
             self.item_start_date = pd.to_datetime(dates['Item Start Date:']).strftime('%Y-%m-%d')
         self.fee, self.benefit75, self.benefit85, self.safety_net = self.get_fees()
+        return self
 
     def display(self):
         """Simply print the dataframe created with to_frame()."""
@@ -155,11 +156,11 @@ class MBSOnline(object):
 
     def set_description(self):
         """Extract the item description from the soup."""
-        description = None
+        description = []
         for elem in self.soup.find_all('p'):
             if elem.get('align') == 'justify':
-                description = elem.text.encode('utf-8').strip()
-        return str(description)
+                description.append(elem.text.encode('utf-8').strip())
+        return ' '.join(map(str, description))
 
     def set_dates(self):
         """Extract the relevant dates from the soup."""
