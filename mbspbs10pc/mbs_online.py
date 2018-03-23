@@ -1,6 +1,7 @@
 """This module gathers info of an MBS item from health.gov.au website."""
 
 import re
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -43,21 +44,34 @@ class MBSOnline(object):
         description: string
             Textual description of the given MBS item.
 
-        fee_start_date: # TODO
+        fee_start_date: string
+            Fee start date formatted as '%Y-%m-%d'.
 
-        description_start_date # TODO
-        item_start_date # TODO
+        description_start_date: string
+            Description start date formatted as '%Y-%m-%d'.
 
-        fee: # TODO
+        item_start_date: string
+            Item start date formatted as '%Y-%m-%d'.
 
-        benefit75: # TODO
+        fee: float
+            Fee amount in A$.
 
-        benefit85: # TODO
+        benefit75: float
+            Benefit 75% amount in A$.
 
-        safety_net: # TODO
+        benefit85: float
+            Benefit 85% amount in A$.
+
+        safety_net: float
+            Safety net amount in A$.
+
+        _url: string
+            Base 'health.gov.au' url request.
+
+        _notfound: string
+            No results found warning message from 'health.gov.au'.
         """
         self.item = str(item)
-        self.url = 'http://www9.health.gov.au/mbs/search.cfm?'
         self.soup = None
         self.category = None
         self.group = None
@@ -72,21 +86,28 @@ class MBSOnline(object):
         self.benefit85 = None
         self.safety_net = None
 
+        self._url = 'http://www9.health.gov.au/mbs/search.cfm?'
+        self._notfound = 'No results were found. Please refine your search'
+
     def set_attributes(self):
         """asd."""
         self.soup = self.send_request(sopt='I')
 
-        self.category = self.set_category()
-        self.group, self.subgroup, self.subheading = self.set_info()
-        self.description = self.set_description()
-        dates = self.set_dates()
-        if u'Schedule Fee Start Date:' in dates:
-            self.fee_start_date = pd.to_datetime(dates[u'Schedule Fee Start Date:']).strftime('%Y-%m-%d')
-        if u'Description Start Date:' in dates:
-            self.description_start_date = pd.to_datetime(dates[u'Description Start Date:']).strftime('%Y-%m-%d')
-        if 'Item Start Date:' in dates:
-            self.item_start_date = pd.to_datetime(dates['Item Start Date:']).strftime('%Y-%m-%d')
-        self.fee, self.benefit75, self.benefit85, self.safety_net = self.get_fees()
+        if self._notfound in self.soup.text:
+            warnings.warn('Item {} not found on '
+                          'health.gov.au'.format(self.item))
+        else:
+            self.category = self.set_category()
+            self.group, self.subgroup, self.subheading = self.set_info()
+            self.description = self.set_description()
+            dates = self.set_dates()
+            if u'Schedule Fee Start Date:' in dates:
+                self.fee_start_date = pd.to_datetime(dates[u'Schedule Fee Start Date:']).strftime('%Y-%m-%d')
+            if u'Description Start Date:' in dates:
+                self.description_start_date = pd.to_datetime(dates[u'Description Start Date:']).strftime('%Y-%m-%d')
+            if 'Item Start Date:' in dates:
+                self.item_start_date = pd.to_datetime(dates['Item Start Date:']).strftime('%Y-%m-%d')
+            self.fee, self.benefit75, self.benefit85, self.safety_net = self.get_fees()
         return self
 
     def display(self):
@@ -133,14 +154,17 @@ class MBSOnline(object):
         if sopt.upper() == 'S':
             raise NotImplementedError('Search all notes and items not yet '
                                       'implemented')
-        r = requests.get(self.url, params={'q': self.item, 'sopt': sopt})
+        r = requests.get(self._url, params={'q': self.item, 'sopt': sopt})
         return BeautifulSoup(r.text, 'html.parser')
 
     def set_category(self):
         """Extract the categories from the soup."""
-        category_elem = filter(lambda x: 'category' in x.text.lower(),
-                               self.soup.find_all('h3'))[0]
-        return category_elem.text.split('<')[0]
+        category_elem = filter(lambda x: 'category' in x.text.lower(), self.soup.find_all('h3'))
+        if len(category_elem) > 0:
+            category_elem = category_elem[0].text.split('<')[0]
+        else:
+            category_elem = None
+        return category_elem
 
     def set_info(self):
         """Extract group, subgroup and subheading from the soup."""
