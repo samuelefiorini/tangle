@@ -41,11 +41,11 @@ def timespan_encoding(days):
         raise ValueError('Unsupported negative timespans')
     elif days >= 0 and days <= 14:
         enc = 0
-    elif days > 14 and days <= 30:  # using the "economic" month duration
+    elif days > 14 and days <= 30:  # using the "business" month duration
         enc = 1
-    elif days > 30 and days <= 90:  # using the "economic" month duration
+    elif days > 30 and days <= 90:  # using the "business" month duration
         enc = 2
-    elif days > 90 and days <= 360:  # using the "economic" year duration
+    elif days > 90 and days <= 360:  # using the "business" year duration
         enc = 3
     else:
         enc = 4
@@ -103,7 +103,7 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
     # SPPLY_DT is the date of the FIRST diabetes drug supply
 
     # Step 2: follow each patient in the mbs files
-    # at first create a very large dictionary with all the MBS files
+    # at first create a very large DataFrame with all the MBS files
     # (keeping only the relevant columns)
     # It is possible here to exclude pregnant subjects
     mbs_df = pd.DataFrame(columns=['PIN', 'ITEM', 'DOS', 'PINSTATE'])
@@ -137,8 +137,10 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
             # use the appropriate encoding
             timedeltas = map(timespan_encoding, timedeltas)
             # then build the sequence as ['exam', idle-days, 'exam', idle-days, ...]
-            seq = flatten([[btos, dt] for btos, dt in zip(tmp['BTOS-4D'].values, timedeltas)])
-            seq.append(tmp['BTOS-4D'].values.ravel()[-1])  # add the last exam (ignored by zip)
+            # seq = flatten([[btos, dt] for btos, dt in zip(tmp['BTOS-4D'].values, timedeltas)])
+            seq = flatten([[btos, dt] for btos, dt in zip(tmp['ITEM'].values, timedeltas)])
+            # seq.append(tmp['BTOS-4D'].values.ravel()[-1])  # add the last exam (ignored by zip)
+            seq.append(tmp['ITEM'].values.ravel()[-1])  # add the last exam (ignored by zip)
             # and finally collapse everything down to a string like 'G0G1H...'
             seq = ''.join(map(str, seq))
             # compute the average age during the treatment by computing the average year
