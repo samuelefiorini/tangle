@@ -93,7 +93,7 @@ class MBSOnline(object):
         """Simply print the dataframe created with to_frame()."""
         print(self.to_frame())
 
-    def to_frame(self):
+    def to_frame(self, transposed=True):
         """Generate a pandas.DataFrame with the MBS info extracted."""
         df = pd.DataFrame(index=[self.item])
         df.loc[self.item, 'Category'] = self.category
@@ -108,7 +108,10 @@ class MBSOnline(object):
         df.loc[self.item, 'Benefit 75% (A$)'] = self.benefit75
         df.loc[self.item, 'Benefit 85% (A$)'] = self.benefit85
         df.loc[self.item, 'Safety Net'] = self.safety_net
-        return df.transpose()
+        if transposed:
+            return df.transpose()
+        else:
+            return df
 
     def send_request(self, sopt='I'):
         """Send request to `health.gov.au`.
@@ -188,6 +191,7 @@ class MBSOnline(object):
                     splitted = np.array(re.sub(' +', ' ', elem_p.text).split(' '))
                     if u'Fee:' in splitted:
                         fees = filter(lambda x: '$' in x, splitted)
+                        fees = map(lambda x: re.sub(',', '', x), fees)
                         fee = np.float(fees[0].split('$')[1])
                         benefit75 = np.float(fees[1].split('$')[1])
                         if len(fees) > 2:  # not always there
