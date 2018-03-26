@@ -114,7 +114,7 @@ class MBSOnline(object):
         """Simply print the dataframe created with to_frame()."""
         print(self.to_frame())
 
-    def to_frame(self, transposed=True):
+    def to_frame(self, transpose=True):
         """Generate a pandas.DataFrame with the MBS info extracted."""
         df = pd.DataFrame(index=[self.item])
         df.loc[self.item, 'Category'] = self.category
@@ -129,7 +129,7 @@ class MBSOnline(object):
         df.loc[self.item, 'Benefit 75% (A$)'] = self.benefit75
         df.loc[self.item, 'Benefit 85% (A$)'] = self.benefit85
         df.loc[self.item, 'Safety Net'] = self.safety_net
-        if transposed:
+        if transpose:
             return df.transpose()
         else:
             return df
