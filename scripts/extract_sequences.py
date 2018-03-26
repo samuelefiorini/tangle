@@ -69,6 +69,7 @@ from __future__ import print_function
 import argparse
 import cPickle as pkl
 import os
+from datetime import datetime
 
 import mbspbs10pc.raw_data_utils as utils
 from mbspbs10pc.utils import check_input
@@ -113,7 +114,7 @@ def init_main():
 
     # Check output filename
     if args.output is None:
-        args.output = args.source[:-4]+'_'
+        args.output = 'DumpFile'+str(datetime.now())
 
     return args
 

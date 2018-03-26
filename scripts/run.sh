@@ -9,7 +9,7 @@
 # clear; python scripts/assign_labels.py -r ../../data -s tmp -o tmp/labels.csv
 
 # --- Extract raw data --- #
-clear; python scripts/extract_sequences.py -sic -r ../../data -ep -s tmp/labels.csv
+clear; python scripts/extract_sequences.py -sic -r ../../data -ep -s tmp/labels.csv -o tmp/item_days
 
 # --- Prepare data for matching with CEM --- #
 # clear; python scripts/matching_step1.py -s tmp -o tmp/metformin
