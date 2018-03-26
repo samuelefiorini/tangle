@@ -10,6 +10,7 @@ notebooks/*.csv
 notebooks/**/*.csv
 notebooks/**/*.txt
 notebooks/**/*.png
+glove6B/**
 
 # data
 **/*.npy
