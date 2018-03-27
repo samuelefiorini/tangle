@@ -137,7 +137,7 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
             # then build the sequence as ['exam', idle-days, 'exam', idle-days, ...]
             seq = flatten([[item, dt] for item, dt in zip(tmp['ITEM'].values, timedeltas)])
             seq.append(tmp['ITEM'].values.ravel()[-1])  # add the last exam (ignored by zip)
-            # and finally collapse everything down to a string like 'G0G1H...'
+            # and finally collapse everything down to a string like '213 0 66520 5...'
             seq = ' '.join(map(str, seq))
             # compute the average age during the treatment by computing the average year
             avg_age = np.mean(pd.DatetimeIndex(tmp['DOS'].values.ravel()).year)  - dfs.loc[pin]['YOB']
