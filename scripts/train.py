@@ -8,14 +8,14 @@ matched by CEM (see `matching_step1.py` and `matching_step2.R`).
 from __future__ import print_function
 import matplotlib
 matplotlib.use('Agg')
-import warnings
-warnings.filterwarnings('ignore')
 
 import argparse
 import os
+import warnings
 from datetime import datetime
 
 import joblib as jl
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from keras import optimizers as opt
@@ -29,7 +29,7 @@ from mbspbs10pc.plotting import plot_confusion_matrix, plot_history
 from sklearn import metrics
 from sklearn.model_selection import StratifiedShuffleSplit
 
-
+warnings.filterwarnings('ignore')
 
 
 def parse_arguments():
