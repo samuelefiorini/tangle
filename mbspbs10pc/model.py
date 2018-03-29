@@ -7,6 +7,7 @@ from keras.layers import (Add, Bidirectional, LSTM, Dense, Dropout,
                           Embedding, GlobalAveragePooling1D, Input, Lambda,
                           Multiply, Permute, RepeatVector)
 from keras.models import Model
+from keras.regularizers import l2
 
 
 def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
@@ -100,6 +101,7 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
                   name='attention_tanh')(alpha)
     alpha = Dense(mbs_input_shape[0], activation='softmax',
                   name='attention_matrix')(alpha)
+
     if single_attention:  # obtain a single attention vector by averaging
         alpha = Lambda(lambda x: K.mean(x, axis=1),
                        name='attention_probabilities')(alpha)
@@ -118,7 +120,8 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
     x = Dropout(0.5)(x)
     x = Dense(dense_units, activation='relu')(x)
     x = Dropout(0.5)(x)
-    output = Dense(1, activation='sigmoid')(x)
+    output = Dense(1, activation='sigmoid',
+                   activity_regularizer=l2(0.002))(x)
 
     # Define the model
     model = Model(inputs=[mbs_input, timestamp_input],

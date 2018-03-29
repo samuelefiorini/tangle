@@ -9,10 +9,13 @@
 # clear; python scripts/assign_labels.py -r ../../data -s tmp -o tmp/labels.csv
 
 # --- Extract raw data --- #
-clear; python scripts/extract_sequences.py -sic -r ../../data -ep -s tmp/labels.csv -o tmp/item_days
+# clear; python scripts/extract_sequences.py -sic -r ../../data -ep -s tmp/labels.csv -o tmp/item_days
 
 # --- Prepare data for matching with CEM --- #
 # clear; python scripts/matching_step1.py -s tmp -o tmp/metformin
 
 # --- Match with CEM --- #
 # Rscript scripts/matching_step2.R
+
+# --- Train model --- #
+clear; python scripts/train.py -l tmp/1_METONLY_vs_METX/matched_CEM_table.csv -d tmp/item_days_raw_data_.pkl -e tmp/embedding.300d.csv -o tmp/output
