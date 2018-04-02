@@ -229,7 +229,7 @@ def fit_model(model, training_set, validation_set, outputfile):
                                 save_best_only=True, save_weights_only=True)]
 
     history = model.fit(x=training_set[0], y=training_set[1],
-                        epochs=100,
+                        epochs=200,
                         callbacks=callbacks,
                         batch_size=128,
                         validation_data=validation_set)
@@ -292,7 +292,7 @@ def main():
     model.get_layer('mbs_embedding').trainable = True
 
     # Compile the model
-    model.compile(optimizer=opt.RMSprop(lr=0.001),
+    model.compile(optimizer=opt.RMSprop(lr=0.01),
                   loss='binary_crossentropy',
                   metrics=['acc'])
     print(u'\u2713')
