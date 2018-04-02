@@ -3,9 +3,9 @@
 Keras implementation.
 """
 from keras import backend as K
-from keras.layers import (Add, Bidirectional, LSTM, Dense, Dropout,
-                          Embedding, GlobalAveragePooling1D, Input, Lambda,
-                          Multiply, Permute, RepeatVector)
+from keras.layers import (LSTM, Add, Bidirectional, Dense, Dropout, Embedding,
+                          GlobalAveragePooling1D, Input, Lambda, Multiply,
+                          Permute, RepeatVector)
 from keras.models import Model
 from keras.regularizers import l2
 
@@ -31,8 +31,8 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
         the embedding matrix.
 
     embedding_size: int (default=50)
-        The size of the used word embedding, it should be in [50, 100, 200, 300]
-        according to `glove.6B`.
+        The size of the used word embedding, it should be in [50, 100, 200,
+        300] according to `glove.6B`.
 
     recurrent_units: int (default=8)
         The number of recurrent units in the LSTM layers.
@@ -43,21 +43,21 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
     bidirectional: bool (default=True)
         This flag control wether or bidirectional LSTM layers should be used.
 
-    single_attention: bool (default=False)
-        This flag control wether or not using a single attention vector shared
-        across multiple recurrent hidden states or keep all of them. If yes, the
-        attention vector is computed as the mean of all the attentions evaluated
-        for each hidden state dimension.
+    single_attention: bool(default=False)
+    This flag control wether or not using a single attention vector shared
+    across multiple recurrent hidden states or keep all of them. If yes, the
+    attention vector is computed as the mean of all the attentions evaluated
+    for each hidden state dimension.
 
-    LSTMLayer: keras.layer (default=keras.layer.LSTM)
-        This parameter controls which implementation of the LSTM layer should be
-        used. There are two possibilities:
-            - `keras.layer.LSTM`: slower implementation, that enables the use of
-              recurrent dropout and the extraction of the activations by
+    LSTMLayer: keras.layer(default=keras.layer.LSTM)
+        This parameter controls which implementation of the LSTM layer should
+         be used. There are two possibilities:
+            - `keras.layer.LSTM`: slower implementation, that enables the use
+              of recurrent dropout and the extraction of the activations by
               `mbspbs10pc.read_activations.get_activations()`
             - `keras.layer.CuDNNLSTM`: faster CuDNN implementation of the LSTM
-              layer where recurrent dropout is not available nor the extraction
-              of the activations.
+              layer where recurrent dropout is not available nor the
+              extraction of the activations.
         Best practice is to use the fast implementation for training and the
         slow one for attention extraction.
         For more info see https://keras.io/layers/recurrent/.
@@ -69,18 +69,19 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
     """
     # Channel 1: MBS
     mbs_input = Input(shape=mbs_input_shape, name='mbs_input')
-    x1 = Embedding(vocabulary_size, embedding_size,
-                   name='mbs_embedding')(mbs_input)
+    e = Embedding(vocabulary_size, embedding_size,
+                  name='mbs_embedding')(mbs_input)
     if bidirectional:
         x1 = Bidirectional(LSTMLayer(recurrent_units, return_sequences=True),
-                           name='mbs_lstm')(x1)
+                           name='mbs_lstm')(e)
     else:
         x1 = LSTMLayer(recurrent_units, return_sequences=True,
-                       name='mbs_lstm')(x1)
+                       name='mbs_lstm')(e)
 
     # -- Timestamp-guided attention -- #
     # Channel 2: Timestamps
-    timestamp_input = Input(shape=timestamp_input_shape, name='timestamp_input')
+    timestamp_input = Input(shape=timestamp_input_shape,
+                            name='timestamp_input')
     if bidirectional:
         x2 = Bidirectional(LSTMLayer(recurrent_units, return_sequences=True),
                            name='timestamp_lstm')(timestamp_input)
@@ -101,7 +102,6 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
                   name='attention_tanh')(alpha)
     alpha = Dense(mbs_input_shape[0], activation='softmax',
                   name='attention_matrix')(alpha)
-
     if single_attention:  # obtain a single attention vector by averaging
         alpha = Lambda(lambda x: K.mean(x, axis=1),
                        name='attention_probabilities')(alpha)
@@ -117,6 +117,8 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
 
     # Output
     x = GlobalAveragePooling1D(name='pooling')(context)
+    x = Dropout(0.5)(x)
+    x = Dense(dense_units, activation='relu')(x)
     x = Dropout(0.5)(x)
     x = Dense(dense_units, activation='relu')(x)
     x = Dropout(0.5)(x)
