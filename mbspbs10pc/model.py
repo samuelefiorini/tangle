@@ -3,11 +3,104 @@
 Keras implementation.
 """
 from keras import backend as K
+from keras.engine.topology import Layer
 from keras.layers import (LSTM, Add, Bidirectional, Dense, Dropout, Embedding,
                           GlobalAveragePooling1D, Input, Lambda, Multiply,
                           Permute, RepeatVector)
 from keras.models import Model
 from keras.regularizers import l2
+
+
+class TimestampGuidedAttention(Layer):
+    def __init__(self, dense_units, use_bias=True, **kwargs):
+        """Implementation of the Timestamp guided attention layer."""
+        self.dense_units = dense_units
+        self.use_bias = use_bias
+        self.output_dim = None
+        super(TimestampGuidedAttention, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        # input_shape is:
+        # [(None, timesteps, hidden_units), (None, timesteps, hidden_units)]
+        if not isinstance(input_shape, list):
+            raise ValueError('This layer should be called '
+                             'on a list of 2 inputs.')
+        if len(input_shape) < 2:
+            raise ValueError('This layer should be called '
+                             'on a list of 2 inputs. '
+                             'Got ' + str(len(input_shape)) + ' inputs.')
+        hidden_units = [s[1] for s in input_shape if s is not None]
+        if len(set(hidden_units)) > 1:
+            raise ValueError('The two inputs should have the same number of '
+                             'hidden units. Got {}.'.format(hidden_units))
+        n_h = hidden_units[0]
+
+        # Dense MBS-items weights (linear activation)
+        self.kernel_x = self.add_weight(name='kernel_x',
+                                        shape=(n_h, self.dense_units),
+                                        initializer='glorot_uniform',
+                                        trainable=True)
+        # Dense timestamp weights (linear activation)
+        self.kernel_t = self.add_weight(name='kernel_t',
+                                        shape=(n_h, self.dense_units),
+                                        initializer='glorot_uniform',
+                                        trainable=True)
+        # Dense (MBS-items * timestamp) weights (tanh activations)
+        self.kernel_d = self.add_weight(name='kernel_d',
+                                        shape=(n_h, self.dense_units),
+                                        initializer='glorot_uniform',
+                                        trainable=True)
+        # Dense weights (softmax activations)
+        self.kernel_a = self.add_weight(name='kernel_a',
+                                        shape=(n_h, self.dense_units),
+                                        initializer='glorot_uniform',
+                                        trainable=True)
+        if self.use_bias:
+                self.bias_x = self.add_weight(name='bias_x',
+                                              shape=(self.dense_units,),
+                                              initializer='zeros',
+                                              trainable=True)
+                self.bias_t = self.add_weight(name='bias_t',
+                                              shape=(self.dense_units,),
+                                              initializer='zeros',
+                                              trainable=True)
+                self.bias_d = self.add_weight(name='bias_d',
+                                              shape=(self.dense_units,),
+                                              initializer='zeros',
+                                              trainable=True)
+
+        # The output dimension should be the same as the input one
+        self.output_dim = input_shape[0]
+        super(TimestampGuidedAttention, self).build(input_shape)
+
+    def call(self, inputs):
+        assert len(inputs) == 2
+        x = Permute((2, 1))(inputs[0])  # transpose input
+        t = Permute((2, 1))(inputs[1])
+        # First two dense layers with linear activation
+        gamma = K.dot(x, self.kernel_x)
+        beta = K.dot(t, self.kernel_t)
+        if self.use_bias:
+            gamma = K.bias_add(gamma, self.bias_x)
+            beta = K.bias_add(beta, self.bias_t)
+
+        # Sum the two resulting tensors
+        delta = Add()([gamma, beta])
+
+        # Dense layer with tanh activation
+        u = K.dot(delta, self.kernel_d)
+        if self.use_bias:
+            u = K.bias_add(u, self.bias_d)
+        u = K.tanh(u)
+
+        # Dense layer with softmax activation (no bias needed)
+        alpha = K.softmax(K.dot(u, self.kernel_a))
+        alpha = Permute((2, 1))(alpha)  # transpose back to the original shape
+
+        return alpha
+
+    def compute_output_shape(self, input_shape):
+        return self.output_dim
 
 
 def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
@@ -88,29 +181,9 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
     else:
         x2 = LSTMLayer(recurrent_units, return_sequences=True,
                        name='timestamp_lstm')(timestamp_input)
-    x2 = Permute((2, 1), name='transpose_timestamp')(x2)
-    x2 = Dense(mbs_input_shape[0], activation='linear',
-               name='timestamp_dense')(x2)
 
-    # Attention probability distribution
-    alpha = Permute((2, 1), name='hidden_to_time_permute')(x1)
-    alpha = Dense(mbs_input_shape[0], activation='linear',
-                  name='alpha_dense')(alpha)
-    alpha = Add(name='timestamp_induced_attention')([alpha, x2])
-
-    alpha = Dense(mbs_input_shape[0], activation='tanh',
-                  name='attention_tanh')(alpha)
-    alpha = Dense(mbs_input_shape[0], activation='softmax',
-                  name='attention_matrix')(alpha)
-    if single_attention:  # obtain a single attention vector by averaging
-        alpha = Lambda(lambda x: K.mean(x, axis=1),
-                       name='attention_probabilities')(alpha)
-        if bidirectional:
-            alpha = RepeatVector(2 * recurrent_units)(alpha)
-        else:
-            alpha = RepeatVector(recurrent_units)(alpha)
-    alpha = Permute((2, 1), name='time_to_hidden_permute')(alpha)
-    # -- Timestamp-guided attention -- #
+    alpha = TimestampGuidedAttention(mbs_input_shape[0],
+                                     name='tsg_attention')([x1, x2])
 
     # Combine channels to get context
     context = Multiply(name='context_creation')([alpha, x1])
@@ -120,10 +193,8 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
     x = Dropout(0.5)(x)
     x = Dense(dense_units, activation='relu')(x)
     x = Dropout(0.5)(x)
-    x = Dense(dense_units, activation='relu')(x)
-    x = Dropout(0.5)(x)
     output = Dense(1, activation='sigmoid',
-                   activity_regularizer=l2(0.002))(x)
+                   activity_regularizer=l2(0.001))(x)
 
     # Define the model
     model = Model(inputs=[mbs_input, timestamp_input],

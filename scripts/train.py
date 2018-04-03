@@ -6,13 +6,15 @@ matched by CEM (see `matching_step1.py` and `matching_step2.R`).
 """
 
 from __future__ import print_function
-import matplotlib
-matplotlib.use('Agg')
 
 import argparse
 import os
 import warnings
 from datetime import datetime
+import matplotlib
+
+matplotlib.use('Agg')
+warnings.filterwarnings('ignore')
 
 import joblib as jl
 import matplotlib.pyplot as plt
@@ -28,8 +30,6 @@ from mbspbs10pc.model import build_model
 from mbspbs10pc.plotting import plot_confusion_matrix, plot_history
 from sklearn import metrics
 from sklearn.model_selection import StratifiedShuffleSplit
-
-warnings.filterwarnings('ignore')
 
 
 def parse_arguments():
@@ -224,9 +224,9 @@ def fit_model(model, training_set, validation_set, outputfile):
     callbacks = [ReduceLROnPlateau(monitor='val_loss',
                                    factor=0.5, patience=7,
                                    min_lr=1e-6, verbose=1),
-                EarlyStopping(monitor='val_loss', patience=15),
-                ModelCheckpoint(filepath=outputfile+'_weights.h5',
-                                save_best_only=True, save_weights_only=True)]
+                 EarlyStopping(monitor='val_loss', patience=15),
+                 ModelCheckpoint(filepath=outputfile+'_weights.h5',
+                                 save_best_only=True, save_weights_only=True)]
 
     history = model.fit(x=training_set[0], y=training_set[1],
                         epochs=200,
@@ -234,12 +234,9 @@ def fit_model(model, training_set, validation_set, outputfile):
                         batch_size=128,
                         validation_data=validation_set)
 
-    # print('* Saving weights...', end=' ')
-    # model.save_weights(outputfile+'_weights.h5')
-    # print(u'\u2713')
-
     print('* Saving training history...', end=' ')
-    _ = plot_history(history)
+    plt.figure(dpi=100)
+    plot_history(history)
     plt.savefig(outputfile+'_loss_history.png')
     print(u'\u2713')
     return model
@@ -292,7 +289,7 @@ def main():
     model.get_layer('mbs_embedding').trainable = True
 
     # Compile the model
-    model.compile(optimizer=opt.RMSprop(lr=0.01),
+    model.compile(optimizer=opt.RMSprop(lr=0.007),
                   loss='binary_crossentropy',
                   metrics=['acc'])
     print(u'\u2713')
@@ -300,7 +297,7 @@ def main():
     # Print the summary to file
     print('* Saving model summary and graph structure...', end=' ')
     filename = args.output+'_summary.txt'
-    with open(filename,'w') as f:
+    with open(filename, 'w') as f:
         model.summary(print_fn=lambda x: f.write(x + '\n'))
 
     # Save the model dotfile
@@ -316,13 +313,23 @@ def main():
     y_test = ts_set[1]
     y_pred = model.predict(ts_set[0]).ravel()
 
+    # Plot non-normalized confusion matrix
+    cnf_matrix = metrics.confusion_matrix(y_test, y_pred > 0.5)
+    plt.figure(dpi=100)
+    plot_confusion_matrix(cnf_matrix, classes=['METONLY', 'METX'],
+                          title='Confusion matrix', cmap=plt.cm.Blues)
+    plt.savefig(args.output+'_cm.png')
+
+    # Save stats
     loss = metrics.log_loss(y_test, y_pred)
     acc = metrics.accuracy_score(y_test, y_pred > 0.5)
     prec = metrics.precision_score(y_test, y_pred > 0.5)
     rcll = metrics.recall_score(y_test, y_pred > 0.5)
     auc = metrics.roc_auc_score(y_test, y_pred)
     print('Test scores:\n * Log-Loss\t{:1.5f}\n * Accuracy:\t{:1.5f}\n '
-          '* Precision:\t{:1.5f}\n * Recall:\t{:1.5f}\n * AUC: \t{:1.5f}'.format(loss, acc, prec, rcll, auc), file=open(args.output+'_stats.txt', 'w'))
+          '* Precision:\t{:1.5f}\n * Recall:\t{:1.5f}\n * AUC:'
+          '\t{:1.5f}'.format(loss, acc, prec, rcll, auc),
+          file=open(args.output+'_stats.txt', 'w'))
 
 
 ################################################################################
