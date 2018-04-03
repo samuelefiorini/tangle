@@ -21,7 +21,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from keras import optimizers as opt
-from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
+from keras.callbacks import (EarlyStopping, History, ModelCheckpoint,
+                             ReduceLROnPlateau)
 from keras.layers import CuDNNLSTM
 from keras.preprocessing.sequence import pad_sequences
 from keras.preprocessing.text import Tokenizer
@@ -218,21 +219,94 @@ def train_validation_test_split(data, labels, test_size=0.4,
     return train_set, validation_set, test_set
 
 
-def fit_model(model, training_set, validation_set, outputfile):
+def get_callbacks(RLRP_patience=7, ES_patience=15, MC_filepath=None):
+    """Get the callbacks list.
+
+    Parameters:
+    --------------
+    RLRP_patience: int (default=7)
+        Patience for ReduceLROnPlateau.
+
+    ES_patience: int (default=15)
+        Patience for EarlyStopping.
+
+    MC_filepath: string
+        ModelCheckpoint filepath.
+
+    Returns:
+    --------------
+    callbacks: list
+        Callbacks list:
+        [ReduceLROnPlateau(...), EarlyStopping(...), ModelCheckpoint(...)]
+    """
+    callbacks = [ReduceLROnPlateau(monitor='val_loss',
+                                   factor=0.5, patience=RLRP_patience,
+                                   min_lr=1e-6, verbose=1),
+                 EarlyStopping(monitor='val_loss', patience=ES_patience),
+                 ModelCheckpoint(filepath=MC_filepath+'_weights.h5',
+                                 save_best_only=True, save_weights_only=True)]
+    return callbacks
+
+
+def concatenate_history(h):
+    """Concatenate History objects.
+
+    Useful for layers fine tuning.
+
+    Parameters:
+    --------------
+    h: list
+        List of history objects to concatenate.
+
+    Returns:
+    --------------
+    history: `keras.callbacks.History`
+        The resulting `History` object.
+    """
+    h0, h1 = h[0], h[1]
+    history = History()
+    history.history = {}
+    history.epoch = h0.epoch + h1.epoch
+
+    for k in h0.history.keys():
+        history.history[k] = h0.history[k] + h1.history[k]
+
+    return history
+
+
+def fit_model(model, training_set, validation_set, outputfile,
+              fine_tune_embedding=False):
     # Start training
     print('* Training model...')
-    callbacks = [ReduceLROnPlateau(monitor='val_loss',
-                                   factor=0.5, patience=7,
-                                   min_lr=1e-6, verbose=1),
-                 EarlyStopping(monitor='val_loss', patience=15),
-                 ModelCheckpoint(filepath=outputfile+'_weights.h5',
-                                 save_best_only=True, save_weights_only=True)]
+    callbacks = get_callbacks(RLRP_patience=2, ES_patience=4,
+                              MC_filepath=outputfile)
 
     history = model.fit(x=training_set[0], y=training_set[1],
                         epochs=200,
                         callbacks=callbacks,
                         batch_size=128,
                         validation_data=validation_set)
+
+    if fine_tune_embedding:
+        print(print('* Fine-tuning the embedding layer...'))
+        # Fine-tune the embedding layers
+        model.get_layer('mbs_embedding').trainable = True
+
+        # Re-compile the model
+        model.compile(optimizer=opt.RMSprop(lr=0.001),
+                      loss='binary_crossentropy',
+                      metrics=['acc'])
+
+        callbacks = get_callbacks(RLRP_patience=5, ES_patience=10,
+                                  MC_filepath=outputfile+'_finetuned')
+
+        history_ft = model.fit(x=training_set[0], y=training_set[1],
+                               epochs=200,
+                               callbacks=callbacks,
+                               batch_size=128,
+                               validation_data=validation_set,
+                               initial_epoch=history.epoch[-1])
+        history = concatenate_history([history, history_ft])
 
     print('* Saving training history...', end=' ')
     plt.figure(dpi=100)
@@ -285,10 +359,10 @@ def main():
 
     # Initialize the embedding matrix
     model.get_layer('mbs_embedding').set_weights([embedding_matrix])
-    model.get_layer('mbs_embedding').trainable = True
+    model.get_layer('mbs_embedding').trainable = False
 
     # Compile the model
-    model.compile(optimizer=opt.RMSprop(lr=0.005),
+    model.compile(optimizer=opt.RMSprop(lr=0.01),
                   loss='binary_crossentropy',
                   metrics=['acc'])
     print(u'\u2713')
@@ -304,11 +378,12 @@ def main():
     print(u'\u2713')
 
     # Fit the model
-    model = fit_model(model, tr_set, v_set, outputfile=args.output)
+    model = fit_model(model, tr_set, v_set, outputfile=args.output,
+                      fine_tune_embedding=True)
 
     # Test set evaluation
     print('* Evaluate on test set...')
-    model.load_weights(args.output+'_weights.h5')
+    model.load_weights(args.output+'_finetuned_weights.h5')
     y_test = ts_set[1]
     y_pred = model.predict(ts_set[0]).ravel()
 

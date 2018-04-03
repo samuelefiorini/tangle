@@ -191,7 +191,6 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
 
     # Output
     x = GlobalAveragePooling1D(name='pooling')(context)
-    x = Dense(dense_units, activation='relu')(x)
     x = Dropout(0.5)(x)
     x = Dense(dense_units, activation='relu')(x)
     x = Dropout(0.5)(x)
@@ -201,4 +200,5 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
     # Define the model
     model = Model(inputs=[mbs_input, timestamp_input],
                   outputs=[output])
+
     return model
