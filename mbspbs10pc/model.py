@@ -4,24 +4,32 @@ Keras implementation.
 """
 from keras import backend as K
 from keras.engine.topology import Layer
-from keras.layers import (LSTM, Add, Bidirectional, Dense, Dropout, Embedding,
-                          GlobalAveragePooling1D, Input, Lambda, Multiply,
-                          Permute, RepeatVector)
+from keras.layers import (LSTM, Add, Bidirectional, Dense, Dot, Dropout,
+                          Embedding, GlobalAveragePooling1D, Input, Multiply,
+                          Permute)
 from keras.models import Model
 from keras.regularizers import l2
 
 
 class TimestampGuidedAttention(Layer):
-    def __init__(self, dense_units, use_bias=True, **kwargs):
-        """Implementation of the Timestamp guided attention layer."""
-        self.dense_units = dense_units
+    def __init__(self, n_timestamps, use_bias=True, **kwargs):
+        """Implementation of the Timestamp guided attention layer.
+
+        Parameters:
+        --------------
+        n_timestamps: int
+            The number of input timestamps defines the size of the dense
+            layers.
+        """
+        self.dense_units = n_timestamps
         self.use_bias = use_bias
         self.output_dim = None
         super(TimestampGuidedAttention, self).__init__(**kwargs)
 
     def build(self, input_shape):
         # input_shape is:
-        # [(None, timesteps, hidden_units), (None, timesteps, hidden_units)]
+        # [(None, n_timestamps, recurrent_hidden_units),
+        #  (None, n_timestamps, recurrent_hidden_units)]
         if not isinstance(input_shape, list):
             raise ValueError('This layer should be called '
                              'on a list of 2 inputs.')
@@ -180,7 +188,8 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
     # -- Timestamp-guided attention -- #
 
     # Combine channels to get context
-    context = Multiply(name='context_creation')([alpha, x1])
+    # context = Multiply(name='context_creation')([alpha, x1])
+    context = Dot(axes=1, name='context_creation')([alpha, x1])
 
     # Output
     x = GlobalAveragePooling1D(name='pooling')(context)

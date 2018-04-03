@@ -130,7 +130,7 @@ def tokenize(data):
     # Pad tokenized sequences
     lengths = [len(x) for x in seq]
     maxlen = int(np.percentile(lengths, 95))
-    padded_mbs_seq = pad_sequences(seq, maxlen=maxlen)
+    padded_mbs_seq = pad_sequences(seq, maxlen=maxlen, padding='pre')
 
     # Pad timestamps
     t_seq = [map(int, data.loc[idx, 'times_seq'].split(' '))
@@ -281,7 +281,6 @@ def main():
                         recurrent_units=64,
                         dense_units=128,
                         bidirectional=True,
-                        single_attention=False,
                         LSTMLayer=CuDNNLSTM)
 
     # Initialize the embedding matrix
