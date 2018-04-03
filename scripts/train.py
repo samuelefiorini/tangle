@@ -278,7 +278,7 @@ def fit_model(model, training_set, validation_set, outputfile,
               fine_tune_embedding=False):
     # Start training
     print('* Training model...')
-    callbacks = get_callbacks(RLRP_patience=2, ES_patience=4,
+    callbacks = get_callbacks(RLRP_patience=3, ES_patience=12,
                               MC_filepath=outputfile)
 
     history = model.fit(x=training_set[0], y=training_set[1],
@@ -359,10 +359,10 @@ def main():
 
     # Initialize the embedding matrix
     model.get_layer('mbs_embedding').set_weights([embedding_matrix])
-    model.get_layer('mbs_embedding').trainable = False
+    model.get_layer('mbs_embedding').trainable = True
 
     # Compile the model
-    model.compile(optimizer=opt.RMSprop(lr=0.01),
+    model.compile(optimizer=opt.RMSprop(lr=0.007),
                   loss='binary_crossentropy',
                   metrics=['acc'])
     print(u'\u2713')
@@ -379,11 +379,11 @@ def main():
 
     # Fit the model
     model = fit_model(model, tr_set, v_set, outputfile=args.output,
-                      fine_tune_embedding=True)
+                      fine_tune_embedding=False)
 
     # Test set evaluation
     print('* Evaluate on test set...')
-    model.load_weights(args.output+'_finetuned_weights.h5')
+    model.load_weights(args.output+'_weights.h5')
     y_test = ts_set[1]
     y_pred = model.predict(ts_set[0]).ravel()
 
