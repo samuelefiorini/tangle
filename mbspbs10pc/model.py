@@ -105,8 +105,7 @@ class TimestampGuidedAttention(Layer):
 
 def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
                 embedding_size=50, recurrent_units=8, dense_units=16,
-                bidirectional=True, single_attention=False,
-                LSTMLayer=LSTM):
+                bidirectional=True, LSTMLayer=LSTM):
     """Build the keras model.
 
     Parameters:
@@ -135,12 +134,6 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
 
     bidirectional: bool (default=True)
         This flag control wether or bidirectional LSTM layers should be used.
-
-    single_attention: bool(default=False)
-    This flag control wether or not using a single attention vector shared
-    across multiple recurrent hidden states or keep all of them. If yes, the
-    attention vector is computed as the mean of all the attentions evaluated
-    for each hidden state dimension.
 
     LSTMLayer: keras.layer(default=keras.layer.LSTM)
         This parameter controls which implementation of the LSTM layer should
@@ -195,7 +188,7 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
     x = Dense(dense_units, activation='relu')(x)
     x = Dropout(0.5)(x)
     output = Dense(1, activation='sigmoid',
-                   activity_regularizer=l2(0.001))(x)
+                   activity_regularizer=l2(0.002))(x)
 
     # Define the model
     model = Model(inputs=[mbs_input, timestamp_input],
