@@ -288,7 +288,7 @@ def main():
     model.get_layer('mbs_embedding').trainable = True
 
     # Compile the model
-    model.compile(optimizer=opt.RMSprop(lr=0.007),
+    model.compile(optimizer=opt.RMSprop(lr=0.005),
                   loss='binary_crossentropy',
                   metrics=['acc'])
     print(u'\u2713')

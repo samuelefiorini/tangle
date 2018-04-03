@@ -5,8 +5,7 @@ Keras implementation.
 from keras import backend as K
 from keras.engine.topology import Layer
 from keras.layers import (LSTM, Add, Bidirectional, Dense, Dot, Dropout,
-                          Embedding, GlobalAveragePooling1D, Input, Multiply,
-                          Permute)
+                          Embedding, GlobalAveragePooling1D, Input, Permute)
 from keras.models import Model
 from keras.regularizers import l2
 
@@ -188,11 +187,11 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
     # -- Timestamp-guided attention -- #
 
     # Combine channels to get context
-    # context = Multiply(name='context_creation')([alpha, x1])
     context = Dot(axes=1, name='context_creation')([alpha, x1])
 
     # Output
     x = GlobalAveragePooling1D(name='pooling')(context)
+    x = Dense(dense_units, activation='relu')(x)
     x = Dropout(0.5)(x)
     x = Dense(dense_units, activation='relu')(x)
     x = Dropout(0.5)(x)
