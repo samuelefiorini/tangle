@@ -43,21 +43,16 @@ class TimestampGuidedAttention(Layer):
         n_timestamps = timestamps[0]
         n_hidden = input_shape[0][-1]
 
-        # Dense MBS-items weights (linear activation)
+        # Dense MBS-items weights (tanh activation)
         self.kernel_x = self.add_weight(name='kernel_x',
                                         shape=(n_timestamps, n_timestamps),
                                         initializer='glorot_uniform',
                                         trainable=True)
-        # Dense timestamp weights (linear activation)
+        # Dense timestamp weights (tanh activation)
         self.kernel_t = self.add_weight(name='kernel_t',
                                         shape=(n_timestamps, n_timestamps),
                                         initializer='glorot_uniform',
                                         trainable=True)
-        # # Dense (MBS-items * timestamp) weights (tanh activations)
-        # self.kernel_d = self.add_weight(name='kernel_d',
-        #                                 shape=(n_timestamps, n_timestamps),
-        #                                 initializer='glorot_uniform',
-        #                                 trainable=True)
         # Dense weights (softmax activations)
         self.kernel_a = self.add_weight(name='kernel_a',
                                         shape=(n_timestamps, n_timestamps),
@@ -77,10 +72,6 @@ class TimestampGuidedAttention(Layer):
                                               shape=(n_timestamps,),
                                               initializer='zeros',
                                               trainable=True)
-                # self.bias_d = self.add_weight(name='bias_d',
-                #                               shape=(n_timestamps,),
-                #                               initializer='zeros',
-                #                               trainable=True)
 
         # Other useful variables
         self.n_timestamps = n_timestamps
@@ -104,19 +95,10 @@ class TimestampGuidedAttention(Layer):
         gamma = K.tanh(gamma)
         beta = K.tanh(beta)
 
-        print('gamma: {}'.format(gamma.shape))
-        print('beta: {}'.format(beta.shape))
-
         # Convex combination of the two resulting tensors
         _left = K.repeat_elements(self.lambda_, self.n_timestamps, axis=-1) * gamma
         _right = (K.constant(1, shape=self.lambda_.shape) - self.lambda_) * beta
         delta = Add()([_left, _right])  # lambda * gamma + (1 - lambda) * beta
-
-        # Dense layer with tanh activation
-        # u = K.dot(delta, self.kernel_d)
-        # if self.use_bias:
-        #     u = K.bias_add(u, self.bias_d)
-        # u = K.tanh(u)
 
         # Dense layer with softmax activation (no bias needed)
         alpha = K.softmax(K.dot(delta, self.kernel_a))
