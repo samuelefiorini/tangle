@@ -185,7 +185,7 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
     alpha = TimestampGuidedAttention(name='tsg_attention')([x1, x2])
     # -- Timestamp-guided attention -- #
 
-    # Combine channels to get context
+    # Combine channels to get contribution and context
     c = Multiply(name='contribution')([alpha, x1])
     x = Dot(axes=1, name='context')([c, e])
 
