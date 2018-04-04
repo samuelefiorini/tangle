@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from keras import optimizers as opt
 from keras.callbacks import (EarlyStopping, History, ModelCheckpoint,
-                             ReduceLROnPlateau)
+                             TensorBoard, ReduceLROnPlateau)
 from keras.layers import CuDNNLSTM
 from keras.utils import plot_model
 from mbspbs10pc.model import build_model
@@ -93,7 +93,11 @@ def get_callbacks(RLRP_patience=7, ES_patience=15, MC_filepath=None):
                                    min_lr=1e-6, verbose=1),
                  EarlyStopping(monitor='val_loss', patience=ES_patience),
                  ModelCheckpoint(filepath=MC_filepath+'_weights.h5',
-                                 save_best_only=True, save_weights_only=True)]
+                                 save_best_only=True, save_weights_only=True),
+                 TensorBoard(log_dir='/tmp/logs', histogram_freq=3,
+                             batch_size=128, write_graph=True,
+                             embeddings_freq=3,
+                             embeddings_layer_names=[])]
     return callbacks
 
 
@@ -131,7 +135,7 @@ def fit_model(model, training_set, validation_set, outputfile,
                               MC_filepath=outputfile)
 
     history = model.fit(x=training_set[0], y=training_set[1],
-                        epochs=200,
+                        epochs=100,
                         callbacks=callbacks,
                         batch_size=128,
                         validation_data=validation_set)
@@ -202,7 +206,7 @@ def main():
                         vocabulary_size=embedding_matrix.shape[0],
                         embedding_size=embedding_matrix.shape[1],
                         recurrent_units=64,
-                        dense_units=128,
+                        dense_units=512,
                         bidirectional=True,
                         LSTMLayer=CuDNNLSTM)
 
@@ -211,7 +215,7 @@ def main():
     model.get_layer('mbs_embedding').trainable = True
 
     # Compile the model
-    model.compile(optimizer=opt.RMSprop(lr=0.007),
+    model.compile(optimizer=opt.RMSprop(lr=0.004),
                   loss='binary_crossentropy',
                   metrics=['acc'])
     print(u'\u2713')

@@ -5,7 +5,8 @@ Keras implementation.
 from keras import backend as K
 from keras.engine.topology import Layer
 from keras.layers import (LSTM, Add, Bidirectional, Dense, Dot, Dropout,
-                          Embedding, GlobalAveragePooling1D, Input, Permute)
+                          Embedding, GlobalAveragePooling1D, Input, Multiply,
+                          Permute)
 from keras.models import Model
 from keras.regularizers import l2
 
@@ -93,6 +94,7 @@ class TimestampGuidedAttention(Layer):
 
         # Sum the two resulting tensors
         delta = Add()([gamma, beta])
+        print('\ndelta: {}'.format(delta.shape))
 
         # Dense layer with tanh activation
         u = K.dot(delta, self.kernel_d)
@@ -187,10 +189,11 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
     # -- Timestamp-guided attention -- #
 
     # Combine channels to get context
-    context = Dot(axes=1, name='context_creation')([alpha, x1])
+    c = Multiply(name='contribution')([alpha, x1])
+    x = Dot(axes=1, name='context')([c, e])
 
     # Output
-    x = GlobalAveragePooling1D(name='pooling')(context)
+    x = GlobalAveragePooling1D(name='pooling')(x)
     x = Dropout(0.5)(x)
     x = Dense(dense_units, activation='relu')(x)
     x = Dropout(0.5)(x)
