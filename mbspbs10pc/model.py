@@ -4,11 +4,36 @@ Keras implementation.
 """
 from keras import backend as K
 from keras.engine.topology import Layer
-from keras.layers import (LSTM, Add, Bidirectional, Dense, Dot, Dropout,
+from keras.layers import (LSTM, Bidirectional, Dense, Dot, Dropout,
                           Embedding, GlobalAveragePooling1D, Input, Multiply,
                           Permute)
 from keras.models import Model
 from keras.regularizers import l2
+
+
+class ConvexCombination(Layer):
+    def __init__(self, **kwargs):
+        super(ConvexCombination, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        _, n_hidden, _ = input_shape[0]
+        # input_shape is:
+        # [(None, recurrent_hidden_units, n_timestamps),
+        #  (None, recurrent_hidden_units, n_timestamps)]
+        # Adding one dimension for broadcasting
+        self.lambd = self.add_weight(name='lambda',
+                                     shape=(n_hidden, 1),
+                                     initializer='glorot_uniform',
+                                     trainable=True)
+        super(ConvexCombination, self).build(input_shape)
+
+    def call(self, x):
+        # x is a list of two tensors with
+        # shape=(batch_size, recurrent_hidden_units, n_timestamps)
+        return self.lambd * x[0] + (1 - self.lambd) * x[1]
+
+    def compute_output_shape(self, input_shape):
+        return input_shape[0]
 
 
 class TimestampGuidedAttention(Layer):
@@ -58,11 +83,6 @@ class TimestampGuidedAttention(Layer):
                                         shape=(n_timestamps, n_timestamps),
                                         initializer='glorot_uniform',
                                         trainable=True)
-        self.lambda_ = self.add_weight(name='lambda_',
-                                       shape=(n_hidden, 1),
-                                       initializer='glorot_uniform',
-                                       trainable=True)
-
         if self.use_bias:
                 self.bias_x = self.add_weight(name='bias_x',
                                               shape=(n_timestamps,),
@@ -96,9 +116,8 @@ class TimestampGuidedAttention(Layer):
         beta = K.tanh(beta)
 
         # Convex combination of the two resulting tensors
-        _left = K.repeat_elements(self.lambda_, self.n_timestamps, axis=-1) * gamma
-        _right = (K.constant(1, shape=self.lambda_.shape) - self.lambda_) * beta
-        delta = Add()([_left, _right])  # lambda * gamma + (1 - lambda) * beta
+        # lambda * gamma + (1 - lambda) * beta
+        delta = ConvexCombination()([gamma, beta])
 
         # Dense layer with softmax activation (no bias needed)
         alpha = K.softmax(K.dot(delta, self.kernel_a))
