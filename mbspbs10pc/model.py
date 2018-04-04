@@ -41,8 +41,6 @@ class TimestampGuidedAttention(Layer):
             raise ValueError('The two inputs should have the same number of '
                              'timestamps. Got {}.'.format(timestamps))
         n_timestamps = timestamps[0]
-        print('\nn_h: {}'.format(n_timestamps))
-        print('\ndense: {}'.format(self.dense_units))
 
         # Dense MBS-items weights (linear activation)
         self.kernel_x = self.add_weight(name='kernel_x',
@@ -74,7 +72,7 @@ class TimestampGuidedAttention(Layer):
                                               initializer='zeros',
                                               trainable=True)
                 self.bias_d = self.add_weight(name='bias_d',
-                                              shape=(n_timestamps,),
+                                              shape=(n_timestamps ,),
                                               initializer='zeros',
                                               trainable=True)
 
@@ -86,18 +84,16 @@ class TimestampGuidedAttention(Layer):
         assert len(inputs) == 2
         x = Permute((2, 1))(inputs[0])  # transpose input
         t = Permute((2, 1))(inputs[1])
-        print('\nx: {}'.format(x.shape))
+
         # First two dense layers with linear activation
         gamma = K.dot(x, self.kernel_x)
         beta = K.dot(t, self.kernel_t)
-        print('\ngamma: {}'.format(gamma.shape))
         if self.use_bias:
             gamma = K.bias_add(gamma, self.bias_x)
             beta = K.bias_add(beta, self.bias_t)
 
         # Sum the two resulting tensors
         delta = Add()([gamma, beta])
-        print('\ndelta: {}'.format(delta.shape))
 
         # Dense layer with tanh activation
         u = K.dot(delta, self.kernel_d)
