@@ -4,7 +4,7 @@ Keras implementation.
 """
 from keras import backend as K
 from keras.engine.topology import Layer
-from keras.layers import (LSTM, Average, Bidirectional, Dense, Dot, Dropout,
+from keras.layers import (LSTM, Add, Bidirectional, Dense, Dot, Dropout,
                           Embedding, GlobalAveragePooling1D, Input, Multiply,
                           Permute)
 from keras.models import Model
@@ -41,19 +41,15 @@ class TimestampGuidedAttention(Layer):
             raise ValueError('The two inputs should have the same number of '
                              'timestamps. Got {}.'.format(timestamps))
         n_timestamps = timestamps[0]
+        n_hidden = input_shape[0][-1]
 
-        # Dense MBS-items weights (linear activation)
+        # Dense MBS-items weights (tanh activation)
         self.kernel_x = self.add_weight(name='kernel_x',
                                         shape=(n_timestamps, n_timestamps),
                                         initializer='glorot_uniform',
                                         trainable=True)
-        # Dense timestamp weights (linear activation)
+        # Dense timestamp weights (tanh activation)
         self.kernel_t = self.add_weight(name='kernel_t',
-                                        shape=(n_timestamps, n_timestamps),
-                                        initializer='glorot_uniform',
-                                        trainable=True)
-        # Dense (MBS-items * timestamp) weights (tanh activations)
-        self.kernel_d = self.add_weight(name='kernel_d',
                                         shape=(n_timestamps, n_timestamps),
                                         initializer='glorot_uniform',
                                         trainable=True)
@@ -62,6 +58,11 @@ class TimestampGuidedAttention(Layer):
                                         shape=(n_timestamps, n_timestamps),
                                         initializer='glorot_uniform',
                                         trainable=True)
+        self.lambda_ = self.add_weight(name='lambda_',
+                                       shape=(n_hidden, 1),
+                                       initializer='glorot_uniform',
+                                       trainable=True)
+
         if self.use_bias:
                 self.bias_x = self.add_weight(name='bias_x',
                                               shape=(n_timestamps,),
@@ -71,10 +72,10 @@ class TimestampGuidedAttention(Layer):
                                               shape=(n_timestamps,),
                                               initializer='zeros',
                                               trainable=True)
-                self.bias_d = self.add_weight(name='bias_d',
-                                              shape=(n_timestamps ,),
-                                              initializer='zeros',
-                                              trainable=True)
+
+        # Other useful variables
+        self.n_timestamps = n_timestamps
+        self.n_hidden = n_hidden
 
         # The output dimension should be the same as the input one
         self.output_dim = input_shape[0]
@@ -91,18 +92,16 @@ class TimestampGuidedAttention(Layer):
         if self.use_bias:
             gamma = K.bias_add(gamma, self.bias_x)
             beta = K.bias_add(beta, self.bias_t)
+        gamma = K.tanh(gamma)
+        beta = K.tanh(beta)
 
-        # Average the two resulting tensors
-        delta = Average()([gamma, beta])
-
-        # Dense layer with tanh activation
-        u = K.dot(delta, self.kernel_d)
-        if self.use_bias:
-            u = K.bias_add(u, self.bias_d)
-        u = K.tanh(u)
+        # Convex combination of the two resulting tensors
+        _left = K.repeat_elements(self.lambda_, self.n_timestamps, axis=-1) * gamma
+        _right = (K.constant(1, shape=self.lambda_.shape) - self.lambda_) * beta
+        delta = Add()([_left, _right])  # lambda * gamma + (1 - lambda) * beta
 
         # Dense layer with softmax activation (no bias needed)
-        alpha = K.softmax(K.dot(u, self.kernel_a))
+        alpha = K.softmax(K.dot(delta, self.kernel_a))
         alpha = Permute((2, 1))(alpha)  # transpose back to the original shape
 
         return alpha
@@ -186,7 +185,7 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
     alpha = TimestampGuidedAttention(name='tsg_attention')([x1, x2])
     # -- Timestamp-guided attention -- #
 
-    # Combine channels to get context
+    # Combine channels to get contribution and context
     c = Multiply(name='contribution')([alpha, x1])
     x = Dot(axes=1, name='context')([c, e])
 
