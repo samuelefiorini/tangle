@@ -206,7 +206,7 @@ def main():
                         vocabulary_size=embedding_matrix.shape[0],
                         embedding_size=embedding_matrix.shape[1],
                         recurrent_units=64,
-                        dense_units=512,
+                        dense_units=64,
                         bidirectional=True,
                         LSTMLayer=CuDNNLSTM)
 
