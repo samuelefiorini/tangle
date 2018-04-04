@@ -4,7 +4,7 @@ Keras implementation.
 """
 from keras import backend as K
 from keras.engine.topology import Layer
-from keras.layers import (LSTM, Add, Bidirectional, Dense, Dot, Dropout,
+from keras.layers import (LSTM, Average, Bidirectional, Dense, Dot, Dropout,
                           Embedding, GlobalAveragePooling1D, Input, Multiply,
                           Permute)
 from keras.models import Model
@@ -92,8 +92,8 @@ class TimestampGuidedAttention(Layer):
             gamma = K.bias_add(gamma, self.bias_x)
             beta = K.bias_add(beta, self.bias_t)
 
-        # Sum the two resulting tensors
-        delta = Add()([gamma, beta])
+        # Average the two resulting tensors
+        delta = Average()([gamma, beta])
 
         # Dense layer with tanh activation
         u = K.dot(delta, self.kernel_d)
