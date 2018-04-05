@@ -70,7 +70,7 @@ def init_main():
 def fit_model(model, training_set, validation_set, outputfile,
               fine_tune_embedding=False):
     # Start training
-    callbacks = get_callbacks(RLRP_patience=3, ES_patience=12,
+    callbacks = get_callbacks(RLRP_patience=3, ES_patience=9,
                               MC_filepath=outputfile)
 
     history = model.fit(x=training_set[0], y=training_set[1],
@@ -89,7 +89,7 @@ def fit_model(model, training_set, validation_set, outputfile,
                       loss='binary_crossentropy',
                       metrics=['acc'])
 
-        callbacks = get_callbacks(RLRP_patience=5, ES_patience=10,
+        callbacks = get_callbacks(RLRP_patience=3, ES_patience=9,
                                   MC_filepath=outputfile + '_finetuned')
 
         history_ft = model.fit(x=training_set[0], y=training_set[1],
