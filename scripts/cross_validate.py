@@ -70,7 +70,6 @@ def init_main():
 def fit_model(model, training_set, validation_set, outputfile,
               fine_tune_embedding=False):
     # Start training
-    print('* Training model...')
     callbacks = get_callbacks(RLRP_patience=3, ES_patience=12,
                               MC_filepath=outputfile)
 
@@ -116,7 +115,7 @@ def main():
     print('-------------------------------------------------------------------')
     args = init_main()
 
-    print('* Number of splits: {}'.format(args.n_splits))
+    print('\n* Number of splits: {}'.format(args.n_splits))
     print('-------------------------------------------------------------------')
 
     # Load data
@@ -163,10 +162,10 @@ def main():
         model.summary(print_fn=lambda x: f.write(x + '\n'))
 
     # Save the model dotfile
-    plot_model(model, show_shapes=True, to_file=args.output + '_dot.png')
+    plot_model(model, show_shapes=True, to_file=args.output+'_dot.png')
     print(u'\u2713')
 
-    # Start cross-validate model
+    # Start to cross-validate the model
     cv_results_ = {'train_loss': [], 'test_loss': [],
                    'train_accuracy': [], 'test_accuracy': [],
                    'train_precision': [], 'test_precision': [],
@@ -182,6 +181,7 @@ def main():
             verbose=False, random_state0=k, random_state1=2*k)
 
         # Fit the model
+        print('[{}] Training model...'.format(k))
         model = fit_model(model, tr_set, v_set, outputfile=args.output+str(k),
                           fine_tune_embedding=False)
 
