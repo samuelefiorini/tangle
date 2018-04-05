@@ -1,4 +1,4 @@
-"""Utility functions to load/visualize/check MBS-PBS 10% dataset."""
+"""Utility functions to load/visualize/check/split MBS-PBS 10% dataset."""
 
 from __future__ import division
 
@@ -159,7 +159,8 @@ def tokenize(data):
 
 
 def train_validation_test_split(data, labels, test_size=0.4,
-                                validation_size=0.1, verbose=False):
+                                validation_size=0.1, verbose=False,
+                                random_state0=None, random_state1=None):
     """Split the input dataset in three non overlapping sets.
 
     Parameters:
@@ -179,6 +180,12 @@ def train_validation_test_split(data, labels, test_size=0.4,
     verbose: bool
         Print verbose debug messages.
 
+    random_state0: int, RandomState instance or None, (default=None)
+        Random state of the learning/test split.
+
+    random_state1: int, RandomState instance or None, (default=None)
+        Random state of the training/validation split.
+
     Returns:
     --------------
     train_set: tuple
@@ -197,7 +204,7 @@ def train_validation_test_split(data, labels, test_size=0.4,
 
     # Learn / Test
     sss = StratifiedShuffleSplit(n_splits=1, test_size=test_size,
-                                 random_state=42)
+                                 random_state=random_state0)
     learn_idx, test_idx = next(sss.split(X, y))
 
     X_learn, y_learn = X[learn_idx, :], y[learn_idx]
@@ -211,7 +218,7 @@ def train_validation_test_split(data, labels, test_size=0.4,
 
     # Training / Validation
     sss = StratifiedShuffleSplit(n_splits=1, test_size=validation_size,
-                                 random_state=420)
+                                 random_state=random_state1)
     train_idx, valid_idx = next(sss.split(X_learn, y_learn))
 
     X_train, y_train = X_learn[train_idx, :], y_learn[train_idx]
