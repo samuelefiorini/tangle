@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from keras import backend as K
 from keras import optimizers as opt
-from keras.layers import CuDNNLSTM as LSTM
+from keras.layers import LSTM
 from mbspbs10pc.model import build_model
 from mbspbs10pc.plotting import plot_history
 from mbspbs10pc.utils import (load_data_labels, tokenize,

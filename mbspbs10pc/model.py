@@ -184,20 +184,23 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
     e = Embedding(vocabulary_size, embedding_size,
                   name='mbs_embedding')(mbs_input)
     if bidirectional:
-        x1 = Bidirectional(LSTMLayer(recurrent_units, return_sequences=True),
+        x1 = Bidirectional(LSTMLayer(recurrent_units, return_sequences=True,
+                                     dropout=0.5, recurrent_dropout=0.5),
                            name='mbs_lstm')(e)
     else:
         x1 = LSTMLayer(recurrent_units, return_sequences=True,
-                       name='mbs_lstm')(e)
+                       dropout=0.5, recurrent_dropout=0.5, name='mbs_lstm')(e)
 
     # Channel 2: Timestamps
     timestamp_input = Input(shape=timestamp_input_shape,
                             name='timestamp_input')
     if bidirectional:
-        x2 = Bidirectional(LSTMLayer(recurrent_units, return_sequences=True),
+        x2 = Bidirectional(LSTMLayer(recurrent_units, return_sequences=True,
+                                     dropout=0.5, recurrent_dropout=0.5),
                            name='timestamp_lstm')(timestamp_input)
     else:
         x2 = LSTMLayer(recurrent_units, return_sequences=True,
+                       dropout=0.5, recurrent_dropout=0.5,
                        name='timestamp_lstm')(timestamp_input)
 
     # -- Timestamp-guided attention -- #
