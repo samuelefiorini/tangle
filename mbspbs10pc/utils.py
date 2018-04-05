@@ -198,9 +198,9 @@ def train_validation_test_split(data, labels, test_size=0.4,
     test_set: tuple
         Same as `train_set`, but for test set.
     """
-    # Full dataset
-    y = labels.values.ravel()
-    X, X_t = data[0], data[1]
+    # Full dataset (force local copy)
+    y = np.array(labels.values.ravel())
+    X, X_t = np.array(data[0]), np.array(data[1])
 
     # Learn / Test
     sss = StratifiedShuffleSplit(n_splits=1, test_size=test_size,

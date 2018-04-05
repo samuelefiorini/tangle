@@ -14,9 +14,9 @@ from datetime import datetime
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from keras import backend as K
 from keras import optimizers as opt
-from keras.layers import CuDNNLSTM
-from keras.utils import plot_model
+from keras.layers import CuDNNLSTM as LSTM
 from mbspbs10pc.model import build_model
 from mbspbs10pc.plotting import plot_history
 from mbspbs10pc.utils import (load_data_labels, tokenize,
@@ -134,37 +134,6 @@ def main():
     padded_mbs_seq, padded_timestamp_seq, _ = tokenize(dataset)
     maxlen = padded_mbs_seq.shape[1]
 
-    # Build the model
-    print('* Building model...', end=' ')
-    model = build_model(mbs_input_shape=(maxlen,),
-                        timestamp_input_shape=(maxlen, 1),
-                        vocabulary_size=embedding_matrix.shape[0],
-                        embedding_size=embedding_matrix.shape[1],
-                        recurrent_units=64,
-                        dense_units=64,
-                        bidirectional=True,
-                        LSTMLayer=CuDNNLSTM)
-
-    # Initialize the embedding matrix
-    model.get_layer('mbs_embedding').set_weights([embedding_matrix])
-    model.get_layer('mbs_embedding').trainable = True
-
-    # Compile the model
-    model.compile(optimizer=opt.RMSprop(lr=0.004),
-                  loss='binary_crossentropy',
-                  metrics=['acc'])
-    print(u'\u2713')
-
-    # Print the summary to file
-    print('* Saving model summary and graph structure...', end=' ')
-    filename = args.output + '_summary.txt'
-    with open(filename, 'w') as f:
-        model.summary(print_fn=lambda x: f.write(x + '\n'))
-
-    # Save the model dotfile
-    plot_model(model, show_shapes=True, to_file=args.output+'_dot.png')
-    print(u'\u2713')
-
     # Start to cross-validate the model
     cv_results_ = {'train_loss': [], 'test_loss': [],
                    'train_accuracy': [], 'test_accuracy': [],
@@ -174,11 +143,33 @@ def main():
 
     print('* Cross-validation...')
     for k in range(args.n_splits):
+        print('-------- SPLIT {} --------'.format(k))
         # Split in training, validation, test sets
         tr_set, v_set, ts_set = train_validation_test_split(
             [padded_mbs_seq, padded_timestamp_seq], dataset['Class'],
             test_size=0.4, validation_size=0.1,
             verbose=False, random_state0=k, random_state1=2*k)
+
+        # Build the model
+        print('[{}] Building model...'.format(k), end=' ')
+        model = build_model(mbs_input_shape=(maxlen,),
+                            timestamp_input_shape=(maxlen, 1),
+                            vocabulary_size=embedding_matrix.shape[0],
+                            embedding_size=embedding_matrix.shape[1],
+                            recurrent_units=64,
+                            dense_units=64,
+                            bidirectional=True,
+                            LSTMLayer=LSTM)
+
+        # Initialize the embedding matrix
+        model.get_layer('mbs_embedding').set_weights([embedding_matrix])
+        model.get_layer('mbs_embedding').trainable = True
+
+        # Compile the model
+        model.compile(optimizer=opt.RMSprop(lr=0.004),
+                      loss='binary_crossentropy',
+                      metrics=['acc'])
+        print(u'\u2713')
 
         # Fit the model
         print('[{}] Training model...'.format(k))
@@ -186,14 +177,16 @@ def main():
                           fine_tune_embedding=False)
 
         # Re-evaluate on training set
-        print('* Re-evaluate on test set...')
+        print('* Re-evaluating on training set... ', end='')
         y_train = tr_set[1]
         y_pred_train = model.predict(tr_set[0]).ravel()
+        print(u'\u2713')
 
         # Test set evaluation
-        print('* Evaluate on test set...')
+        print('* Evaluating on test set... ', end='')
         y_test = ts_set[1]
         y_pred = model.predict(ts_set[0]).ravel()
+        print(u'\u2713')
 
         # Evaluate test stats
         cv_results_['test_loss'].append(
@@ -218,6 +211,11 @@ def main():
             metrics.recall_score(y_train, y_pred_train > 0.5))
         cv_results_['train_roc_auc'].append(
             metrics.roc_auc_score(y_train, y_pred_train))
+
+        print('* Clearing session... ', end='')
+        del model
+        K.clear_session()
+        print(u'\u2713')
 
     print('* Saving cross-validation results...', end='')
     cv_results_ = pd.DataFrame.from_dict(cv_results_, orient='index')
