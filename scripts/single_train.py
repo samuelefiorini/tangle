@@ -169,8 +169,8 @@ def main():
     print(u'\u2713')
 
     # Fit the model
-    # model = fit_model(model, tr_set, v_set, outputfile=args.output,
-    #                   fine_tune_embedding=False)
+    model = fit_model(model, tr_set, v_set, outputfile=args.output,
+                      fine_tune_embedding=False)
 
     # Test set evaluation
     print('* Evaluate on test set...')
