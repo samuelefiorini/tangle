@@ -16,9 +16,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from keras import backend as K
 from keras import optimizers as opt
-from keras.layers import LSTM
+from keras.layers import CuDNNLSTM as LSTM
 from mbspbs10pc.model import build_model
-from mbspbs10pc.plotting import plot_history
+from mbspbs10pc.plotting import plot_history, plot_roc_curve
 from mbspbs10pc.utils import (load_data_labels, tokenize,
                               train_validation_test_split)
 from mbspbs10pc.fit_utils import (concatenate_history, get_callbacks)
@@ -139,7 +139,8 @@ def main():
                    'train_accuracy': [], 'test_accuracy': [],
                    'train_precision': [], 'test_precision': [],
                    'train_recall': [], 'test_recall': [],
-                   'train_roc_auc': [], 'test_roc_auc': []}
+                   'train_roc_auc': [], 'test_roc_auc': [],
+                   'test_roc_curve':[]}
 
     print('* Cross-validation...')
     for k in range(args.n_splits):
@@ -199,6 +200,8 @@ def main():
             metrics.recall_score(y_test, y_pred > 0.5))
         cv_results_['test_roc_auc'].append(
             metrics.roc_auc_score(y_test, y_pred))
+        cv_results_['test_roc_curve'].append(
+            metrics.roc_curve(y_test, y_pred))
 
         # Evaluate train stats
         cv_results_['train_loss'].append(
@@ -217,7 +220,7 @@ def main():
         K.clear_session()
         print(u'\u2713')
 
-    print('* Saving cross-validation results...', end='')
+    print('* Saving cross-validation results... ', end='')
     cv_results_ = pd.DataFrame.from_dict(cv_results_, orient='index')
     cols = cv_results_.columns
     cv_results_['mean'] = cv_results_[cols].mean(axis=1)
@@ -225,6 +228,15 @@ def main():
     cv_results_.to_csv(args.output+'_cv_results.csv')
     print(u'\u2713')
     print(cv_results_)
+
+    # Plot ROC curve
+    print('Generating ROC curves... ', end='')
+    plt.figure(dpi=100)
+    fpr = [roc[0] for roc in cv_results_['test_roc_curve']]
+    tpr = [roc[1] for roc in cv_results_['test_roc_curve']]
+    plot_roc_curve(fpr, tpr, cv_results_['test_roc_auc'])
+    plt.savefig(args.output + '_roc.png')
+    print(u'\u2713')
 
 
 ################################################################################

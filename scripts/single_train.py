@@ -17,11 +17,12 @@ import pandas as pd
 from keras import optimizers as opt
 from keras.layers import CuDNNLSTM
 from keras.utils import plot_model
+from mbspbs10pc.fit_utils import concatenate_history, get_callbacks
 from mbspbs10pc.model import build_model
-from mbspbs10pc.plotting import plot_confusion_matrix, plot_history
+from mbspbs10pc.plotting import (plot_confusion_matrix, plot_history,
+                                 plot_roc_curve)
 from mbspbs10pc.utils import (load_data_labels, tokenize,
                               train_validation_test_split)
-from mbspbs10pc.fit_utils import (concatenate_history, get_callbacks)
 from sklearn import metrics
 
 
@@ -168,8 +169,8 @@ def main():
     print(u'\u2713')
 
     # Fit the model
-    model = fit_model(model, tr_set, v_set, outputfile=args.output,
-                      fine_tune_embedding=False)
+    # model = fit_model(model, tr_set, v_set, outputfile=args.output,
+    #                   fine_tune_embedding=False)
 
     # Test set evaluation
     print('* Evaluate on test set...')
@@ -195,6 +196,11 @@ def main():
           '\t{:1.5f}'.format(loss, acc, prec, rcll, auc),
           file=open(args.output + '_stats.txt', 'w'))
 
+    # Plot ROC curve
+    plt.figure(dpi=100)
+    fpr, tpr, _ = metrics.roc_curve(y_test, y_pred)
+    plot_roc_curve([fpr], [tpr], [auc])
+    plt.savefig(args.output + '_roc.png')
 
 ################################################################################
 

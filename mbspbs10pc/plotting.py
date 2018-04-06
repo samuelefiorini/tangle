@@ -4,6 +4,23 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+def plot_roc_curve(fpr, tpr, auc):
+    """Plot ROC curves of multiple CV runs.
+    """
+    for i, _fpr, _tpr, _auc in zip(range(len(fpr)), fpr, tpr, auc):
+        plt.plot(_fpr, _tpr, lw=2,
+                 label=r'CV$_{}$: AUC = {:1.3f}'.format(i, _auc))
+    plt.plot([0, 1], [0, 1], lw=1, linestyle='--', color='k', alpha=0.6)
+    plt.xlim([-0.01, 1.01])
+    plt.ylim([-0.01, 1.01])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Mean AUC = {:1.3f}'.format(np.mean(auc)))
+    plt.legend()
+    plt.tight_layout()
+    return plt
+
+
 def plot_confusion_matrix(cm, classes,
                           normalize=False,
                           title='Confusion matrix',

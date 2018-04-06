@@ -184,23 +184,20 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
     e = Embedding(vocabulary_size, embedding_size,
                   name='mbs_embedding')(mbs_input)
     if bidirectional:
-        x1 = Bidirectional(LSTMLayer(recurrent_units, return_sequences=True,
-                                     dropout=0.5, recurrent_dropout=0.5),
+        x1 = Bidirectional(LSTMLayer(recurrent_units, return_sequences=True),
                            name='mbs_lstm')(e)
     else:
         x1 = LSTMLayer(recurrent_units, return_sequences=True,
-                       dropout=0.5, recurrent_dropout=0.5, name='mbs_lstm')(e)
+                       name='mbs_lstm')(e)
 
     # Channel 2: Timestamps
     timestamp_input = Input(shape=timestamp_input_shape,
                             name='timestamp_input')
     if bidirectional:
-        x2 = Bidirectional(LSTMLayer(recurrent_units, return_sequences=True,
-                                     dropout=0.5, recurrent_dropout=0.5),
+        x2 = Bidirectional(LSTMLayer(recurrent_units, return_sequences=True),
                            name='timestamp_lstm')(timestamp_input)
     else:
         x2 = LSTMLayer(recurrent_units, return_sequences=True,
-                       dropout=0.5, recurrent_dropout=0.5,
                        name='timestamp_lstm')(timestamp_input)
 
     # -- Timestamp-guided attention -- #
@@ -214,7 +211,7 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
     # Output
     x = GlobalAveragePooling1D(name='pooling')(x)
     x = Dropout(0.5)(x)
-    x = Dense(dense_units, activation='relu')(x)
+    x = Dense(dense_units, activation='linear')(x)
     x = Dropout(0.5)(x)
     output = Dense(1, activation='sigmoid',
                    activity_regularizer=l2(0.002))(x)
