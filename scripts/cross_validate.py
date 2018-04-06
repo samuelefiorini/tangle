@@ -178,6 +178,7 @@ def main():
                           fine_tune_embedding=False)
 
         # Re-evaluate on training set
+        model.load_weights(args.output+str(k)+'_weights.h5')
         print('* Re-evaluating on training set... ', end='')
         y_train = tr_set[1]
         y_pred_train = model.predict(tr_set[0]).ravel()
@@ -233,7 +234,7 @@ def main():
     plt.figure(dpi=100)
     fpr = [roc[0] for roc in roc_curve]
     tpr = [roc[1] for roc in roc_curve]
-    plot_roc_curve(fpr, tpr, cv_results_['test_roc_auc'])
+    plot_roc_curve(fpr, tpr, cv_results_.loc['test_roc_auc', cols])
     plt.savefig(args.output + '_roc.png')
     print(u'\u2713')
 
