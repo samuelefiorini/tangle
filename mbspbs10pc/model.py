@@ -211,9 +211,9 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
     # Output
     x = GlobalAveragePooling1D(name='pooling')(x)
     x = Dropout(0.5)(x)
-    x = Dense(dense_units, activation='linear')(x)
+    x = Dense(dense_units, activation='linear', name='fc')(x)
     x = Dropout(0.5)(x)
-    output = Dense(1, activation='sigmoid',
+    output = Dense(1, activation='sigmoid', name='fc_output',
                    activity_regularizer=l2(0.002))(x)
 
     # Define the model

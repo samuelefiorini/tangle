@@ -64,3 +64,25 @@ Usage example:
 Run the matching algorithm by CEM package and generate a `matched_CEM_table.csv` file.
 
 ### - `single_train.py`
+
+Usage example:
+
+`$ python scripts/single_train.py --labels <PATH-TO matched_CEM_table.csv> --data <PATH-TO raw_data_.pkl> --embedding <PATH-TO embedding.100d.csv> --output <PATH-TO-OUTPUT>`
+
+or, equivalently:
+
+`$ python scripts/single_train.py -l <PATH-TO matched_CEM_table.csv> -d <PATH-TO raw_data_.pkl> -e <PATH-TO embedding.100d.csv> -o <PATH-TO-OUTPUT>`
+
+Fit the bidirectional timestamp-guided model on a random training/validation/test split of the matched dataset.
+
+### - `cross_validate.py`
+
+Usage example:
+
+`$ python scripts/cross_validate.py --n_splits N --labels <PATH-TO matched_CEM_table.csv> --data <PATH-TO raw_data_.pkl> --embedding <PATH-TO embedding.100d.csv> --output <PATH-TO-OUTPUT>`
+
+or, equivalently:
+
+`$ python scripts/cross_validate.py -n N -l <PATH-TO matched_CEM_table.csv> -d <PATH-TO raw_data_.pkl> -e <PATH-TO embedding.100d.csv> -o <PATH-TO-OUTPUT>`
+
+Evaluate the average predictive performance of the model on N random training/validation/test splits.

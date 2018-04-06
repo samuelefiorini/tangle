@@ -139,8 +139,8 @@ def main():
                    'train_accuracy': [], 'test_accuracy': [],
                    'train_precision': [], 'test_precision': [],
                    'train_recall': [], 'test_recall': [],
-                   'train_roc_auc': [], 'test_roc_auc': [],
-                   'test_roc_curve':[]}
+                   'train_roc_auc': [], 'test_roc_auc': []}
+    roc_curve = []
 
     print('* Cross-validation...')
     for k in range(args.n_splits):
@@ -200,8 +200,7 @@ def main():
             metrics.recall_score(y_test, y_pred > 0.5))
         cv_results_['test_roc_auc'].append(
             metrics.roc_auc_score(y_test, y_pred))
-        cv_results_['test_roc_curve'].append(
-            metrics.roc_curve(y_test, y_pred))
+        roc_curve.append(metrics.roc_curve(y_test, y_pred))
 
         # Evaluate train stats
         cv_results_['train_loss'].append(
@@ -232,8 +231,8 @@ def main():
     # Plot ROC curve
     print('Generating ROC curves... ', end='')
     plt.figure(dpi=100)
-    fpr = [roc[0] for roc in cv_results_['test_roc_curve']]
-    tpr = [roc[1] for roc in cv_results_['test_roc_curve']]
+    fpr = [roc[0] for roc in roc_curve]
+    tpr = [roc[1] for roc in roc_curve]
     plot_roc_curve(fpr, tpr, cv_results_['test_roc_auc'])
     plt.savefig(args.output + '_roc.png')
     print(u'\u2713')
