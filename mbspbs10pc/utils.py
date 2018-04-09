@@ -143,10 +143,11 @@ def tokenize(data):
     seq = tokenizer.texts_to_sequences(data['mbs_seq'])
 
     # Pad tokenized sequences
-    lengths = [len(x) for x in seq]
-    maxlen = int(np.percentile(lengths, 95))
+    # lengths = [len(x) for x in seq]
+    # maxlen = int(np.percentile(lengths, 95))
+    maxlen = 250  # the last 250 items
     padded_mbs_seq = pad_sequences(seq, maxlen=maxlen, padding='pre',
-                                   truncating='pre', value=-1)
+                                   truncating='pre', value=0)
 
     # Pad timestamps
     t_seq = [map(int, data.loc[idx, 'times_seq'].split(' '))

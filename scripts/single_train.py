@@ -143,8 +143,8 @@ def main():
                         timestamp_input_shape=(maxlen, 1),
                         vocabulary_size=embedding_matrix.shape[0],
                         embedding_size=embedding_matrix.shape[1],
-                        recurrent_units=64,
-                        dense_units=64,
+                        recurrent_units=32,
+                        dense_units=32,
                         bidirectional=True,
                         LSTMLayer=CuDNNLSTM)
 
