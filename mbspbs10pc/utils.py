@@ -116,13 +116,16 @@ def load_data_labels(data_filename, labels_filename):
     return dataset
 
 
-def tokenize(data):
+def tokenize(data, maxlen=250):
     """Tokenize input data.
 
     Parameters:
     --------------
     data: pandas.DataFrame
         The DataFrame created by `load_data_labels`.
+
+    maxlen: int
+        Maximum length of all sequences (see `pad_sequences`).
 
     Returns:
     --------------
@@ -142,10 +145,9 @@ def tokenize(data):
     tokenizer.fit_on_texts(data['mbs_seq'])
     seq = tokenizer.texts_to_sequences(data['mbs_seq'])
 
-    # Pad tokenized sequences
+    # Pad tokenized sequences (keep only the last maxlen items)
     # lengths = [len(x) for x in seq]
     # maxlen = int(np.percentile(lengths, 95))
-    maxlen = 250  # the last 250 items
     padded_mbs_seq = pad_sequences(seq, maxlen=maxlen, padding='pre',
                                    truncating='pre', value=0)
 

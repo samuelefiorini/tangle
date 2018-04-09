@@ -15,7 +15,7 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import pandas as pd
 from keras import optimizers as opt
-from keras.layers import CuDNNLSTM
+from keras.layers import LSTM
 from keras.utils import plot_model
 from mbspbs10pc.fit_utils import concatenate_history, get_callbacks
 from mbspbs10pc.model import build_model
@@ -146,7 +146,7 @@ def main():
                         recurrent_units=32,
                         dense_units=32,
                         bidirectional=True,
-                        LSTMLayer=CuDNNLSTM)
+                        LSTMLayer=LSTM)
 
     # Initialize the embedding matrix
     model.get_layer('mbs_embedding').set_weights([embedding_matrix])
