@@ -33,7 +33,7 @@ setup(
     ],
     license='FreeBSD',
 
-    packages=['mbspbs10pc', 'notebook'],
+    packages=['mbspbs10pc'],
     install_requires=['pandas (>=0.22.0)',
                       'setuptools (>=39.0.1)',
                       'numpy (>=1.14.2)',
