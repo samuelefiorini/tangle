@@ -40,6 +40,7 @@ setup(
                       'matplotlib (>=2.1.1)',
                       'requests (>=2.18.4)',
                       'Keras (>=2.1.5)',
+                      'tensorflow (>=1.6.0)',
                       'tqdm (>=4.19.5)',
                       'beautifulsoup4 (>=4.6.0)',
                       'joblib (>=0.11)',
