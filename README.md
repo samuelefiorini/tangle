@@ -9,14 +9,15 @@ The main contribution of this project is a bidirectional timestamp-guided attent
 
 **Note**: this project requires Python 2.7. It does not currently work with Python 3.
 
-To use this project for MBS-PBS 10% dataset exploration and analysis, you need to install two sets of tools:
+To use this project for MBS-PBS 10% dataset exploration and analysis, you need to have the MBS-PBS 10% dataset and to install two sets of tools:
 
-- the core `mbspbs10pc` Package and its dependencies
+- the core `mbspbs10pc` package and its dependencies
 - the renderer for the frontend you wish to use (i.e. `Jupyter Notebook` or `JupyterLab`)
 
 If you have cloned the repository, run the following command from the root of the repository:
 
 `$ cd mbspbs10pc`
+
 `$ python setup.py install`
 
 If you do not wish to clone the repository, you can install using:
@@ -25,4 +26,4 @@ If you do not wish to clone the repository, you can install using:
 
 ## More info
 
-For more info see: [pbs.gov.au](http://www.pbs.gov.au/info/news/2016/08/public-release-of-linkable-10-percent-mbs-and-pbs-data)
+For more info see: [pbs.gov.au](http://www.pbs.gov.au/info/news/2016/08/public-release-of-linkable-10-percent-mbs-and-pbs-data).
