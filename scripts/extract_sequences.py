@@ -1,67 +1,9 @@
 #!/usr/bin/env python
 """Extract raw data from the MBS files.
 
-Given a list of PTNT_ID, this script aims at extracting a sequence of MBS
-services usage of each individual. A possible list may be something like:
-
-    123: 'G0P1P0D2'
-
-where, 123 is a patient id; G, P and D are different modified broad type of
-service BOTS-4D; while 0, 1, etc are the timespan between the two examinations.
-So, MBS items in odd position and timespan between any two of them in even
-positions.
-
-The encoding of the MBS items is reported in the column BTOS-4D, where 4D stands
-for "for diabetes" and it is a modified BTOS naming (see also
-data/btos_details.csv and notebooks/BTOS-4D.ipynb):
------------------------------------------------------------------------------------
-BTOS (Heirarchy order) | BTOS NAME	                                      | BTOS-4D
------------------------------------------------------------------------------------
-101	                   | Non-referred attendances GP/VR                   | G
-102	                   | Non-referred attendances - Enhanced Primary Care | G
-103	                   | Non-referred attendances - Other                 | G
-110	                   | Non-referred attendances - Practice Nurse Items  |	G
-150	                   | Other Allied Health                              |	L
-200	                   | Specialist attendances	Specialist attendances    |	E
-300	                   | Obstetrics	                                      |	B
-400	                   | Anaesthetics                                     |	S
-501	                   | Pathology Collection Items	                      | P
-502	                   | Pathology Tests                                  | P
-600	                   | Diagnostic Imaging	                              | I
-700	                   | Operations                                       | S
-800	                   | Assistance at Operations                         | S
-900	                   | Optometry                                        | O
-1000	               | Radiotherapy and Therapeutic Nuclear Medicine    | T
-1100	               | Other MBS services                               | T
-xxxx                   | Diabetes-related treatments                      | D
-xxxx                   | HbA1c test                                       | H
-xxxx                   | Health assessment for people 40-49 years at risk | R
------------------------------------------------------------------------------------
-
-Diabetes-related treatments includes items like (see notebooks/BTOS-4D.ipynb):
-- Completion of an annual cycle of care for patients with established diabetes mellitus
-- Examination of the eyes of a patient with diabetes mellitus
-- Group allied health services for people with Type 2 diabetes
-
-Other symbols are:
-+ HbA1c test
-+ Health Assessment provided as a type 2 diabetes risk evaluation for people aged 40-49 years with a high risk of developing type 2 diabetes as determined by the Australian Type 2 Diabetes Risk Assessment Tool
-
-There are a total number of 12 unique symbols: [B, E, D, G, I, H, L, O, P, S, R, T]
-
-The dictionary for the timespan is here (see `raw_data_utils.timespan_encoding`):
---------------------------------
-Time duration        | Encoding
---------------------------------
-[same day - 2 weeks] | 0
-(2 weeks  - 1 month] | 1
-(1 month  - 3 monts] | 2
-(3 months - 1 year]  | 3
-more than 1 year     | 4
---------------------------------
-
-Remarks:
-- PTNT_ID in PBS is referred to as PIN in MBS.
+This script extracts the raw sequences from the MBS files. An example of
+sequence is `1256 0 56489 12 ...` where odd entries are MBS items
+and even entries are days between each visit.
 """
 
 from __future__ import print_function

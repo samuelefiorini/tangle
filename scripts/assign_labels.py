@@ -1,13 +1,20 @@
 #!/usr/bin/env python
 """Assign class labels to the population of interest.
 
-This script will then produce a list of continuously and consistently
-concessional subjects that use metformin. The following labels are assigned:
+This script aims at finding the patient identifiers of the positive and negative
+classes, where:
++ positive class (`y = 1`): subjects that continuously and consistently use
+  their concessional card in the observation years to buy diabetes drugs,
+- negative class (`y = 0`): subjects that continuously and consistently use
+  their concessional card but were never prescribed to diabetes control drugs.
 
-    * MET_ONLY, i.e.: patients that are using metformin ONLY
-    * MET+X, i.e.: patients that after a first metformin prescription
-      started to use another diabetes controlling drug.
-    * MET2X, i.e.: patients that changed from metformin to another drug
+ This script also extracts two other labels:
+
+ `MET_ONLY` - *i.e.*: patients that are using metformin ONLY
+
+ `MET_AFTER` - *i.e.*: patients that after a first metformin prescription
+               started to use another diabetes controlling drug.
+
 """
 
 from __future__ import print_function
@@ -21,7 +28,6 @@ import numpy as np
 import pandas as pd
 from mbspbs10pc import diabete_utils as d_utils
 from mbspbs10pc.utils import check_input
-from mbspbs10pc.utils import flatten
 
 
 def parse_arguments():

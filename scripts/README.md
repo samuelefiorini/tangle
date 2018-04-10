@@ -6,15 +6,38 @@ To run these scripts you are supposed to have to have organized the MBS-PBS 10% 
 Scripts developed for Python 2.7.
 
 ## Usage and details
-### - `labels_assignment.py`
+### - `get_population_of_interest.py`
 
 Usage example:
 
-`$ python labels_assignment.py --root <ROOT> --skip_input_check --metformin --output <PATH> --target_year <YYYY> --n_jobs <NNN>`
+`$ python get_population_of_interest.py --root <ROOT> --output <PATH-TO-OUTPUT>`
 
 or, equivalently:
 
-`$ python labels_assignment.py -r <ROOT> -sic -m -o <PATH> -t <YYYY> -nj <NNN>`
+`$ python get_population_of_interest.py -r <ROOT> -o <PATH-TO-OUTPUT>`
+
+This script finds continuously and consistently concessional subjects in the
+PBS files (2008 - 2014) that were prescribed to diabetes control drugs.
+In order to be considered continuously and consistently concessional, a subject
+must:
+
+    1) continuously use the concessional cards, i.e.: they use it for at least
+       50% of the observation years,
+    2) consistently satisfy the condition at point 1), i.e.: for at least 50%
+       of the PBS benefit items each year.
+
+This script will then produce a list of continuously and consistently
+concessional subjects that use diabetes control drugs.
+
+### - `assign_labels.py`
+
+Usage example:
+
+`$ python assign_labels.py --root <ROOT> --skip_input_check --source <PATH-TO-SOURCE> --output <PATH-TO-OUTPUT>`
+
+or, equivalently:
+
+`$ python labels_assignment.py -r <ROOT> -sic -s <PATH-TO-SOURCE> -o <PATH-TO-OUTPUT>`
 
 This script aims at finding the patient identifiers of the positive and negative
 classes, where:
@@ -33,11 +56,11 @@ classes, where:
 
 Usage example:
 
-`$ python extract_sequences.py -root <ROOT> --skip_input_check --exclude_pregnancy --source <PATH> -n_jobs <NNN>`
+`$ python extract_sequences.py -root <ROOT> --skip_input_check --exclude_pregnancy --source <PATH-TO-SOURCE> --output <PATH-TO-OUTPUT>`
 
 or, equivalently:
 
-`$ python extract_sequences.py -r <ROOT> -sic -ep -s <PATH> -nj <NNN>`
+`$ python extract_sequences.py -r <ROOT> -sic -ep -s <PATH-TO-SOURCE> --output <PATH-TO-OUTPUT>`
 
 This script extracts the raw sequences from the MBS files. An example of
 sequence is `1256 0 56489 12 ...` where odd entries are MBS items

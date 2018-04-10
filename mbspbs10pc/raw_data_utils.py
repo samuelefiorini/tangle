@@ -87,7 +87,7 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
     dfs = pd.read_csv(source, header=0, index_col=0)
     dfs['PTNT_ID'] = dfs.index  # FIXME: this is LEGACY CODE
     btos4d = pd.read_csv(os.path.join(home[0], 'data', 'btos4d.csv'), header=0,
-                         usecols=['ITEM', 'BTOS-4D'])
+                         usecols=['ITEM', 'BTOS-4D'])  # TODO:DELETE
 
     # check weather or not exclude pregnant subjects
     if exclude_pregnancy:
@@ -111,7 +111,7 @@ def get_raw_data(mbs_files, sample_pin_lookout, exclude_pregnancy=False, source=
         dd = pd.read_csv(mbs, header=0, usecols=['PIN', 'ITEM', 'DOS', 'PINSTATE'], engine='c')
         if exclude_pregnancy: dd = dd.loc[~dd['ITEM'].isin(pregnancy_items), :]
         dd = dd.loc[dd['PIN'].isin(dfs.index), :]  # keep only the relevant samples
-        dd = pd.merge(dd, btos4d, how='left', on='ITEM') # get the BTOS4D
+        dd = pd.merge(dd, btos4d, how='left', on='ITEM') # get the BTOS4D TODO:DELETE
         mbs_df = pd.concat((mbs_df, dd))
     mbs_df.loc[:, 'DOS'] = pd.to_datetime(mbs_df['DOS'], format='%d%b%Y')
 
