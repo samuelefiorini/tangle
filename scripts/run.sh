@@ -18,7 +18,7 @@
 # Rscript scripts/matching_step2.R
 
 # --- Train model --- #
-clear; python scripts/single_train.py -l tmp/1_METONLY_vs_METX/matched_CEM_table.csv -d tmp/item_days_raw_data_.pkl -e tmp/embedding.50d.csv -o tmp/output
+clear; python scripts/single_train.py -l tmp/1_METONLY_vs_METX/matched_CEM_table.csv -d tmp/item_days_raw_data_.pkl -e tmp/embedding.50d.csv -m baseline -o tmp/baseline
 
 # --- Cross validate model -- #
 # clear; python scripts/cross_validate.py -n 10 -l tmp/1_METONLY_vs_METX/matched_CEM_table.csv -d tmp/item_days_raw_data_.pkl -e tmp/embedding.100d.csv -o tmp/output_cv

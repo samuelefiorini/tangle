@@ -90,11 +90,11 @@ Run the matching algorithm by CEM package and generate a `matched_CEM_table.csv`
 
 Usage example:
 
-`$ python scripts/single_train.py --labels <PATH-TO matched_CEM_table.csv> --data <PATH-TO raw_data_.pkl> --embedding <PATH-TO embedding.100d.csv> --output <PATH-TO-OUTPUT>`
+`$ python scripts/single_train.py --labels <PATH-TO matched_CEM_table.csv> --data <PATH-TO raw_data_.pkl> --embedding <PATH-TO embedding.100d.csv> --model proposed --output <PATH-TO-OUTPUT>`
 
 or, equivalently:
 
-`$ python scripts/single_train.py -l <PATH-TO matched_CEM_table.csv> -d <PATH-TO raw_data_.pkl> -e <PATH-TO embedding.100d.csv> -o <PATH-TO-OUTPUT>`
+`$ python scripts/single_train.py -l <PATH-TO matched_CEM_table.csv> -d <PATH-TO raw_data_.pkl> -e <PATH-TO embedding.100d.csv> -m proposed -o <PATH-TO-OUTPUT>`
 
 Fit the bidirectional timestamp-guided model on a random training/validation/test split of the matched dataset.
 

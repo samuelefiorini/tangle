@@ -10,6 +10,8 @@ from keras.layers import (LSTM, Bidirectional, Dense, Dot, Dropout,
 from keras.models import Model
 from keras.regularizers import l2
 
+__implemeted_models__ = ['baseline', 'attention', 'proposed']
+
 
 class ConvexCombination(Layer):
     def __init__(self, **kwargs):
@@ -132,7 +134,11 @@ class TimestampGuidedAttention(Layer):
 def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
                 embedding_size=50, recurrent_units=8, dense_units=16,
                 bidirectional=True, LSTMLayer=LSTM):
-    """Build the keras model.
+    """Build keras proposed model.
+
+    When the `bidirectional` flag is True, this function returns the
+    bidirectional timestamp-guided attention model. Otherwise LSTMLayers flow
+    forward only.
 
     Parameters:
     --------------
@@ -218,6 +224,43 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
 
     # Define the model
     model = Model(inputs=[mbs_input, timestamp_input],
+                  outputs=[output])
+
+    return model
+
+
+def build_baseline_model(mbs_input_shape, timestamp_input_shape,
+                         vocabulary_size, embedding_size=50, recurrent_units=8,
+                         dense_units=16, bidirectional=True, LSTMLayer=LSTM):
+    """Build keras baseline model.
+
+    This function builds a baseline model made of Embedding + LSTM layers only.
+
+    Parameters:
+    --------------
+    see `build_model()`
+    """
+    # Channel 1: MBS
+    mbs_input = Input(shape=mbs_input_shape, name='mbs_input')
+    e = Embedding(vocabulary_size, embedding_size,
+                  name='mbs_embedding')(mbs_input)
+    if bidirectional:
+        x1 = Bidirectional(LSTMLayer(recurrent_units, return_sequences=True),
+                           name='mbs_lstm')(e)
+    else:
+        x1 = LSTMLayer(recurrent_units, return_sequences=True,
+                       name='mbs_lstm')(e)
+
+    # Output
+    x = GlobalAveragePooling1D(name='pooling')(x1)
+    x = Dropout(0.5)(x)
+    x = Dense(dense_units, activation='linear', name='fc')(x)
+    x = Dropout(0.5)(x)
+    output = Dense(1, activation='sigmoid', name='fc_output',
+                   activity_regularizer=l2(0.002))(x)
+
+    # Define the model
+    model = Model(inputs=[mbs_input],
                   outputs=[output])
 
     return model

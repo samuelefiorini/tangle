@@ -15,10 +15,11 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import pandas as pd
 from keras import optimizers as opt
-from keras.layers import LSTM
+from keras.layers import CuDNNLSTM as LSTM
 from keras.utils import plot_model
 from mbspbs10pc.fit_utils import concatenate_history, get_callbacks
-from mbspbs10pc.model import build_model
+from mbspbs10pc.model import (__implemeted_models__, build_baseline_model,
+                              build_model)
 from mbspbs10pc.plotting import (plot_confusion_matrix, plot_history,
                                  plot_roc_curve)
 from mbspbs10pc.utils import (load_data_labels, tokenize,
@@ -41,6 +42,13 @@ def parse_arguments():
     parser.add_argument('-e', '--embedding', type=str,
                         help='Path to the embedding matrix csv file.',
                         default=None)
+    parser.add_argument('-m', '--model', type=str,
+                        help="""Which model should be used. Argument must be
+                        either: 'baseline' for Embedding + LSTM only
+                        , 'attention' for Embedding + LSTM with standard
+                        attention or 'proposed' for bidirectional
+                        timestamp-guided attention model (default)""",
+                        default='proposed')
     parser.add_argument('-o', '--output', type=str,
                         help='Ouput file name root.',
                         default=None)
@@ -61,6 +69,11 @@ def init_main():
     # Check output filename
     if args.output is None:
         args.output = 'out_' + str(datetime.now())
+
+    # Check model architecture
+    if args.model not in __implemeted_models__:
+        raise ValueError('model must be in {}. '
+                         'Found: {}.'.format(__implemeted_models__, args.model))
 
     return args
 
@@ -114,6 +127,9 @@ def main():
     print('-------------------------------------------------------------------')
     args = init_main()
 
+    print('\n* Selected model: {}'.format(args.model))
+    print('-------------------------------------------------------------------')
+
     # Load data
     print('* Loading {} and {}...'.format(args.data, args.labels), end=' ')
     dataset = load_data_labels(args.data, args.labels)
@@ -137,16 +153,31 @@ def main():
         verbose=False, random_state0=42, random_state1=420)
     print(u'\u2713')
 
+    # Drop the timestamps when not needed
+    if args.model.lower() in ['baseline', 'attention']:
+        tr_set = (tr_set[0][0], tr_set[1])
+        v_set = (v_set[0][0], v_set[1])
+        ts_set = (ts_set[0][0], ts_set[1])
+
+    # Define the model arguments
+    kwargs = {'mbs_input_shape': (maxlen,),
+              'timestamp_input_shape': (maxlen, 1),
+              'vocabulary_size': embedding_matrix.shape[0],
+              'embedding_size': embedding_matrix.shape[1],
+              'recurrent_units': 32,
+              'dense_units': 32,
+              'bidirectional': True,
+              'LSTMLayer': LSTM}
+
     # Build the model
     print('* Building model...', end=' ')
-    model = build_model(mbs_input_shape=(maxlen,),
-                        timestamp_input_shape=(maxlen, 1),
-                        vocabulary_size=embedding_matrix.shape[0],
-                        embedding_size=embedding_matrix.shape[1],
-                        recurrent_units=32,
-                        dense_units=32,
-                        bidirectional=True,
-                        LSTMLayer=LSTM)
+    # Baseline model
+    if args.model.lower() == 'baseline':
+        model = build_baseline_model(**kwargs)
+    elif args.model.lower() == 'attention':
+        pass
+    elif args.model.lower() == 'proposed':
+        model = build_model(**kwargs)
 
     # Initialize the embedding matrix
     model.get_layer('mbs_embedding').set_weights([embedding_matrix])
