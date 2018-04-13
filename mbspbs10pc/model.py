@@ -38,6 +38,74 @@ class ConvexCombination(Layer):
         return input_shape[0]
 
 
+class Attention(Layer):
+    def __init__(self, use_bias=True, **kwargs):
+        """Implementation of the standard attention layer.
+
+        This implementation follows "Hierarchical Attention Networks for
+        Document Classification" by Yang et al as closely as possible and it
+        is inspired by
+        https://github.com/philipperemy/keras-attention-mechanism.
+
+        Parameters:
+        --------------
+        n_timestamps: int
+            The number of input timestamps defines the size of the dense
+            layers.
+        """
+        self.use_bias = use_bias
+        self.output_dim = None
+        super(Attention, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        # input_shape is:
+        # [(None, n_timestamps, recurrent_hidden_units)]
+        n_timestamps = input_shape[1]
+        n_hidden = input_shape[-1]
+
+        # Dense MBS-items weights (tanh activation)
+        self.kernel_x = self.add_weight(name='kernel_x',
+                                        shape=(n_timestamps, n_timestamps),
+                                        initializer='glorot_uniform',
+                                        trainable=True)
+        # Dense weights (softmax activations)
+        self.kernel_a = self.add_weight(name='kernel_a',
+                                        shape=(n_timestamps, n_timestamps),
+                                        initializer='glorot_uniform',
+                                        trainable=True)
+        if self.use_bias:
+                self.bias_x = self.add_weight(name='bias_x',
+                                              shape=(n_timestamps,),
+                                              initializer='zeros',
+                                              trainable=True)
+
+        # Other useful variables
+        self.n_timestamps = n_timestamps
+        self.n_hidden = n_hidden
+
+        # The output dimension should be the same as the input one
+        self.output_dim = input_shape
+        super(Attention, self).build(input_shape)
+
+    def call(self, input):
+        x = Permute((2, 1))(input)  # transpose input
+
+        # First two dense layers with linear activation
+        gamma = K.dot(x, self.kernel_x)
+        if self.use_bias:
+            gamma = K.bias_add(gamma, self.bias_x)
+        gamma = K.tanh(gamma)
+
+        # Dense layer with softmax activation (no bias needed)
+        alpha = K.softmax(K.dot(gamma, self.kernel_a))
+        alpha = Permute((2, 1))(alpha)  # transpose back to the original shape
+
+        return alpha
+
+    def compute_output_shape(self, input_shape):
+        return self.output_dim
+
+
 class TimestampGuidedAttention(Layer):
     def __init__(self, use_bias=True, **kwargs):
         """Implementation of the Timestamp guided attention layer.
@@ -224,6 +292,54 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
 
     # Define the model
     model = Model(inputs=[mbs_input, timestamp_input],
+                  outputs=[output])
+
+    return model
+
+
+def build_attention_model(mbs_input_shape, timestamp_input_shape,
+                          vocabulary_size, embedding_size=50,
+                          recurrent_units=8, dense_units=16,
+                          bidirectional=True, LSTMLayer=LSTM):
+    """Build keras attention model.
+
+    This function builds a standard attention model, as in
+    "Hierarchical Attention Networks for Document Classification"
+    by Yang et al.
+
+    Parameters:
+    --------------
+    see `build_model()`
+    """
+    # Channel 1: MBS
+    mbs_input = Input(shape=mbs_input_shape, name='mbs_input')
+    e = Embedding(vocabulary_size, embedding_size,
+                  name='mbs_embedding')(mbs_input)
+    if bidirectional:
+        x1 = Bidirectional(LSTMLayer(recurrent_units, return_sequences=True),
+                           name='mbs_lstm')(e)
+    else:
+        x1 = LSTMLayer(recurrent_units, return_sequences=True,
+                       name='mbs_lstm')(e)
+
+    # -- Timestamp-guided attention -- #
+    alpha = Attention(name='tsg_attention')(x1)
+    # -- Timestamp-guided attention -- #
+
+    # Combine channels to get contribution and context
+    c = Multiply(name='contribution')([alpha, x1])
+    x = Dot(axes=1, name='context')([c, e])
+
+    # Output
+    x = GlobalAveragePooling1D(name='pooling')(x)
+    x = Dropout(0.5)(x)
+    x = Dense(dense_units, activation='linear', name='fc')(x)
+    x = Dropout(0.5)(x)
+    output = Dense(1, activation='sigmoid', name='fc_output',
+                   activity_regularizer=l2(0.002))(x)
+
+    # Define the model
+    model = Model(inputs=[mbs_input],
                   outputs=[output])
 
     return model

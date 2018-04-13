@@ -18,8 +18,8 @@ from keras import optimizers as opt
 from keras.layers import CuDNNLSTM as LSTM
 from keras.utils import plot_model
 from mbspbs10pc.fit_utils import concatenate_history, get_callbacks
-from mbspbs10pc.model import (__implemeted_models__, build_baseline_model,
-                              build_model)
+from mbspbs10pc.model import (__implemeted_models__, build_attention_model,
+                              build_baseline_model, build_model)
 from mbspbs10pc.plotting import (plot_confusion_matrix, plot_history,
                                  plot_roc_curve)
 from mbspbs10pc.utils import (load_data_labels, tokenize,
@@ -175,7 +175,7 @@ def main():
     if args.model.lower() == 'baseline':
         model = build_baseline_model(**kwargs)
     elif args.model.lower() == 'attention':
-        pass
+        model = build_attention_model(**kwargs)
     elif args.model.lower() == 'proposed':
         model = build_model(**kwargs)
 

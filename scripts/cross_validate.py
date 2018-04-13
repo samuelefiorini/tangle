@@ -17,11 +17,12 @@ import pandas as pd
 from keras import backend as K
 from keras import optimizers as opt
 from keras.layers import CuDNNLSTM as LSTM
-from mbspbs10pc.model import build_model
+from mbspbs10pc.fit_utils import concatenate_history, get_callbacks
+from mbspbs10pc.model import (__implemeted_models__, build_attention_model,
+                              build_baseline_model, build_model)
 from mbspbs10pc.plotting import plot_history, plot_roc_curve
 from mbspbs10pc.utils import (load_data_labels, tokenize,
                               train_validation_test_split)
-from mbspbs10pc.fit_utils import (concatenate_history, get_callbacks)
 from sklearn import metrics
 
 
@@ -43,6 +44,13 @@ def parse_arguments():
     parser.add_argument('-e', '--embedding', type=str,
                         help='Path to the embedding matrix csv file.',
                         default=None)
+    parser.add_argument('-m', '--model', type=str,
+                        help="""Which model should be used. Argument must be
+                        either: 'baseline' for Embedding + LSTM only
+                        , 'attention' for Embedding + LSTM with standard
+                        attention or 'proposed' for bidirectional
+                        timestamp-guided attention model (default)""",
+                        default='proposed')
     parser.add_argument('-o', '--output', type=str,
                         help='Ouput file name root.',
                         default=None)
@@ -63,6 +71,11 @@ def init_main():
     # Check output filename
     if args.output is None:
         args.output = 'out_' + str(datetime.now())
+
+    # Check model architecture
+    if args.model not in __implemeted_models__:
+        raise ValueError('model must be in {}. '
+                         'Found: {}.'.format(__implemeted_models__, args.model))
 
     return args
 
@@ -115,7 +128,8 @@ def main():
     print('-------------------------------------------------------------------')
     args = init_main()
 
-    print('\n* Number of splits: {}'.format(args.n_splits))
+    print('\n* Selected model: {}'.format(args.model))
+    print('* Number of splits: {}'.format(args.n_splits))
     print('-------------------------------------------------------------------')
 
     # Load data
@@ -134,6 +148,16 @@ def main():
     padded_mbs_seq, padded_timestamp_seq, _ = tokenize(dataset)
     maxlen = padded_mbs_seq.shape[1]
 
+    # Define the model arguments
+    kwargs = {'mbs_input_shape': (maxlen,),
+              'timestamp_input_shape': (maxlen, 1),
+              'vocabulary_size': embedding_matrix.shape[0],
+              'embedding_size': embedding_matrix.shape[1],
+              'recurrent_units': 32,
+              'dense_units': 32,
+              'bidirectional': True,
+              'LSTMLayer': LSTM}
+
     # Start to cross-validate the model
     cv_results_ = {'train_loss': [], 'test_loss': [],
                    'train_accuracy': [], 'test_accuracy': [],
@@ -151,16 +175,21 @@ def main():
             test_size=0.4, validation_size=0.1,
             verbose=False, random_state0=k, random_state1=2*k)
 
+        # Drop the timestamps when not needed
+        if args.model.lower() in ['baseline', 'attention']:
+            tr_set = (tr_set[0][0], tr_set[1])
+            v_set = (v_set[0][0], v_set[1])
+            ts_set = (ts_set[0][0], ts_set[1])
+
         # Build the model
-        print('[{}] Building model...'.format(k), end=' ')
-        model = build_model(mbs_input_shape=(maxlen,),
-                            timestamp_input_shape=(maxlen, 1),
-                            vocabulary_size=embedding_matrix.shape[0],
-                            embedding_size=embedding_matrix.shape[1],
-                            recurrent_units=64,
-                            dense_units=64,
-                            bidirectional=True,
-                            LSTMLayer=LSTM)
+        print('* Building model...', end=' ')
+        # Baseline model
+        if args.model.lower() == 'baseline':
+            model = build_baseline_model(**kwargs)
+        elif args.model.lower() == 'attention':
+            model = build_attention_model(**kwargs)
+        elif args.model.lower() == 'proposed':
+            model = build_model(**kwargs)
 
         # Initialize the embedding matrix
         model.get_layer('mbs_embedding').set_weights([embedding_matrix])
