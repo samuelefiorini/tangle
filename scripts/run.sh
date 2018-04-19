@@ -18,7 +18,19 @@
 # Rscript scripts/matching_step2.R
 
 # --- Train model --- #
-# clear; python scripts/single_train.py -l tmp/1_METONLY_vs_METX/matched_CEM_table.csv -d tmp/item_days_raw_data_.pkl -e tmp/embedding.50d.csv -m baseline -o tmp/baseline
+# clear; python scripts/single_train.py -l tmp/1_METONLY_vs_METX/matched_CEM_table.csv -d tmp/item_days_raw_data_.pkl -e tmp/embedding.50d.csv -m proposed -o tmp/proposed
 
 # --- Cross validate model -- #
-clear; python scripts/cross_validate.py -n 10 -l tmp/1_METONLY_vs_METX/matched_CEM_table.csv -d tmp/item_days_raw_data_.pkl -e tmp/embedding.50d.csv -m proposed -o tmp/proposed_cv
+# Random embedding init
+clear; python scripts/cross_validate.py -n 10 -l tmp/1_METONLY_vs_METX/matched_CEM_table.csv -d tmp/item_days_raw_data_.pkl -m baseline -o tmp/baseline_randinit
+
+clear; python scripts/cross_validate.py -n 10 -l tmp/1_METONLY_vs_METX/matched_CEM_table.csv -d tmp/item_days_raw_data_.pkl -m attention -o tmp/attention_randinit
+
+clear; python scripts/cross_validate.py -n 10 -l tmp/1_METONLY_vs_METX/matched_CEM_table.csv -d tmp/item_days_raw_data_.pkl -m proposed -o tmp/proposed_randinit
+
+# GloVe embedding init
+clear; python scripts/cross_validate.py -n 10 -l tmp/1_METONLY_vs_METX/matched_CEM_table.csv -d tmp/item_days_raw_data_.pkl -e tmp/embedding.50d.csv -m baseline -o tmp/baseline_gloveinit
+
+clear; python scripts/cross_validate.py -n 10 -l tmp/1_METONLY_vs_METX/matched_CEM_table.csv -d tmp/item_days_raw_data_.pkl -e tmp/embedding.50d.csv -m attention -o tmp/attention_gloveinit
+
+clear; python scripts/cross_validate.py -n 10 -l tmp/1_METONLY_vs_METX/matched_CEM_table.csv -d tmp/item_days_raw_data_.pkl -e tmp/embedding.50d.csv -m proposed -o tmp/proposed_gloveinit

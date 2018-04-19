@@ -3,6 +3,10 @@
 
 Cross-validate the keras model on the data extracted by `extract_sequences.py`
 and matched by CEM (see `matching_step1.py` and `matching_step2.R`).
+
+Note:
+    - u'\u2713' is a tick
+    - u'\u2717' is a cross
 """
 
 from __future__ import print_function
@@ -130,6 +134,8 @@ def main():
 
     print('\n* Selected model: {}'.format(args.model))
     print('* Number of splits: {}'.format(args.n_splits))
+    tick_or_cross = u'\u2713' if args.embedding is not None else u'\u2717'
+    print('[{}] GloVe embedding initialization'.format(tick_or_cross.encode('utf-8')))
     print('-------------------------------------------------------------------')
 
     # Load data
@@ -138,10 +144,11 @@ def main():
     print(u'\u2713')
 
     # Load embedding matrix
-    print('* Loading {}...'.format(args.embedding), end=' ')
-    embedding_matrix = pd.read_csv(
-        args.embedding, header=0, index_col=0).values
-    print(u'\u2713')
+    if args.embedding is not None:
+        print('* Loading {}...'.format(args.embedding), end=' ')
+        embedding_matrix = pd.read_csv(
+            args.embedding, header=0, index_col=0).values
+        print(u'\u2713')
 
     # Tokenize and pad
     print('* Preparing data...', end=' ')
@@ -162,7 +169,8 @@ def main():
     cv_results_ = {'train_loss': [], 'test_loss': [],
                    'train_accuracy': [], 'test_accuracy': [],
                    'train_precision': [], 'test_precision': [],
-                   'train_recall': [], 'test_recall': [],
+                   'train_sensitivity': [], 'test_sensitivity': [],  # aka recall
+                   'train_specificity': [], 'test_specificity': [],
                    'train_roc_auc': [], 'test_roc_auc': []}
     roc_curve = []
 
@@ -226,8 +234,10 @@ def main():
             metrics.accuracy_score(y_test, y_pred > 0.5))
         cv_results_['test_precision'].append(
             metrics.precision_score(y_test, y_pred > 0.5))
-        cv_results_['test_recall'].append(
-            metrics.recall_score(y_test, y_pred > 0.5))
+        cv_results_['test_sensitivity'].append(  # aka recall
+            metrics.recall_score(y_test, y_pred > 0.5, pos_label=1))
+        cv_results_['test_specificity'].append(
+            metrics.recall_score(y_test, y_pred > 0.5, pos_label=0))
         cv_results_['test_roc_auc'].append(
             metrics.roc_auc_score(y_test, y_pred))
         roc_curve.append(metrics.roc_curve(y_test, y_pred))
@@ -239,8 +249,10 @@ def main():
             metrics.accuracy_score(y_train, y_pred_train > 0.5))
         cv_results_['train_precision'].append(
             metrics.precision_score(y_train, y_pred_train > 0.5))
-        cv_results_['train_recall'].append(
-            metrics.recall_score(y_train, y_pred_train > 0.5))
+        cv_results_['train_sensitivity'].append(  # aka recall
+            metrics.recall_score(y_train, y_pred_train > 0.5, pos_label=1))
+        cv_results_['train_specificity'].append(
+            metrics.recall_score(y_train, y_pred_train > 0.5, pos_label=0))
         cv_results_['train_roc_auc'].append(
             metrics.roc_auc_score(y_train, y_pred_train))
 
