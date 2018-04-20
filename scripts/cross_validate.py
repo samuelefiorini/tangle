@@ -3,10 +3,6 @@
 
 Cross-validate the keras model on the data extracted by `extract_sequences.py`
 and matched by CEM (see `matching_step1.py` and `matching_step2.R`).
-
-Note:
-    - u'\u2713' is a tick
-    - u'\u2717' is a cross
 """
 
 from __future__ import print_function
@@ -134,8 +130,7 @@ def main():
 
     print('\n* Selected model: {}'.format(args.model))
     print('* Number of splits: {}'.format(args.n_splits))
-    tick_or_cross = u'\u2713' if args.embedding is not None else u'\u2717'
-    print('[{}] GloVe embedding initialization'.format(tick_or_cross.encode('utf-8')))
+    print('* {} embedding initialization'.format('GloVe' if args.embedding is not None else 'Random'))
     print('-------------------------------------------------------------------')
 
     # Load data
@@ -143,23 +138,28 @@ def main():
     dataset = load_data_labels(args.data, args.labels)
     print(u'\u2713')
 
+    # Tokenize and pad
+    print('* Preparing data...', end=' ')
+    padded_mbs_seq, padded_timestamp_seq, tokenizer = tokenize(dataset)
+    maxlen = padded_mbs_seq.shape[1]
+    vocabulary_size = len(tokenizer.word_index.keys()) + 1  # add the 0 row
+
     # Load embedding matrix
     if args.embedding is not None:
         print('* Loading {}...'.format(args.embedding), end=' ')
         embedding_matrix = pd.read_csv(
             args.embedding, header=0, index_col=0).values
+        embedding_size = embedding_matrix.shape[1]
         print(u'\u2713')
+    else:
+        embedding_size = 50 # default size
 
-    # Tokenize and pad
-    print('* Preparing data...', end=' ')
-    padded_mbs_seq, padded_timestamp_seq, _ = tokenize(dataset)
-    maxlen = padded_mbs_seq.shape[1]
 
     # Define the model arguments
     kwargs = {'mbs_input_shape': (maxlen,),
               'timestamp_input_shape': (maxlen, 1),
-              'vocabulary_size': embedding_matrix.shape[0],
-              'embedding_size': embedding_matrix.shape[1],
+              'vocabulary_size': vocabulary_size,
+              'embedding_size': embedding_size,
               'recurrent_units': 32,
               'dense_units': 32,
               'bidirectional': True,
@@ -200,8 +200,9 @@ def main():
             model = build_model(**kwargs)
 
         # Initialize the embedding matrix
-        model.get_layer('mbs_embedding').set_weights([embedding_matrix])
-        model.get_layer('mbs_embedding').trainable = True
+        if args.embedding is not None:
+            model.get_layer('mbs_embedding').set_weights([embedding_matrix])
+            model.get_layer('mbs_embedding').trainable = True
 
         # Compile the model
         model.compile(optimizer=opt.RMSprop(lr=0.004),

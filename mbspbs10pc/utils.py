@@ -203,12 +203,12 @@ def train_validation_test_split(data, labels, test_size=0.4,
     """
     # Full dataset (force local copy)
     y = np.array(labels.values.ravel())
-    X, X_t = np.array(data[0]), np.array(data[1])
+    X, X_t = data[0].copy(), data[1].copy()
 
     # Learn / Test
     sss = StratifiedShuffleSplit(n_splits=1, test_size=test_size,
                                  random_state=random_state0)
-    learn_idx, test_idx = next(sss.split(X, y))
+    learn_idx, test_idx = next(sss.split(np.zeros((len(y), 1)), y))
 
     X_learn, y_learn = X[learn_idx, :], y[learn_idx]
     X_test, y_test = X[test_idx, :], y[test_idx]
@@ -222,7 +222,7 @@ def train_validation_test_split(data, labels, test_size=0.4,
     # Training / Validation
     sss = StratifiedShuffleSplit(n_splits=1, test_size=validation_size,
                                  random_state=random_state1)
-    train_idx, valid_idx = next(sss.split(X_learn, y_learn))
+    train_idx, valid_idx = next(sss.split(np.zeros((len(y_learn), 1)), y_learn))
 
     X_train, y_train = X_learn[train_idx, :], y_learn[train_idx]
     X_valid, y_valid = X_learn[valid_idx, :], y_learn[valid_idx]
@@ -234,13 +234,13 @@ def train_validation_test_split(data, labels, test_size=0.4,
         print('* {} training / {} validation'.format(len(y_train),
                                                      len(y_valid)))
     # Packing output
-    train_data = [X_train, X_train_t.reshape(len(y_train), X.shape[1], 1)]
+    train_data = [X_train, X_train_t.reshape(len(y_train), X_t.shape[1], 1)]
     train_set = (train_data, y_train)
 
-    validation_data = [X_valid, X_valid_t.reshape(len(y_valid), X.shape[1], 1)]
+    validation_data = [X_valid, X_valid_t.reshape(len(y_valid), X_t.shape[1], 1)]
     validation_set = (validation_data, y_valid)
 
-    test_data = [X_test, X_test_t.reshape(len(y_test), X.shape[1], 1)]
+    test_data = [X_test, X_test_t.reshape(len(y_test), X_t.shape[1], 1)]
     test_set = (test_data, y_test)
 
     return train_set, validation_set, test_set
