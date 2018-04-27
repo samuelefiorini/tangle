@@ -89,7 +89,7 @@ def find_consistently_concessionals(pbs_files):
                 usage[k] = c0c1_counter[k] / df_counter[k]
             usage_df = pd.DataFrame.from_dict(usage, orient='index').rename({0: 'COUNTS'}, axis=1)
 
-            # and keep only the PTNT_ID that use it for at least 50% of the times
+            # and keep only the PTNT_ID that use it for at least 75% of the times
             usage_df = usage_df[usage_df['COUNTS'] >= __C0C1_THRESH__]
 
             # add them to the output set
