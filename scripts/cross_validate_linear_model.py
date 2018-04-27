@@ -89,6 +89,7 @@ def main():
     bow = CountVectorizer(ngram_range=(1, args.ngram),
                           tokenizer=lambda x: x.split(' '))
     xbow = bow.fit_transform(dataset['mbs_seq'])
+    xbow = xbow / np.sum(xbow, axis=1)
     _dummy = np.empty((xbow.shape[0], 1))  # timestamps not used in this case
     print(u'\u2713')
 
@@ -123,7 +124,9 @@ def main():
         test_fold = np.array([0]*X_train.shape[0] + [1]*X_valid.shape[0])
 
         # Define and fit the cross-validated learning model
-        model = LogisticRegressionCV(Cs=10,
+        model = LogisticRegressionCV(Cs=np.logspace(0, 5, 10),
+                                     penalty='l2',
+                                     solver='saga',
                                      cv=PredefinedSplit(test_fold),
                                      n_jobs=-1)
         model.fit(X_learn, y_learn)
