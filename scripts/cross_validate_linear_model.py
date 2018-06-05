@@ -89,7 +89,7 @@ def main():
     bow = CountVectorizer(ngram_range=(1, args.ngram),
                           tokenizer=lambda x: x.split(' '))
     xbow = bow.fit_transform(dataset['mbs_seq'])
-    xbow = xbow / np.sum(xbow, axis=1)
+    xbow = sp.sparse.csr_matrix(xbow / xbow.sum(axis=1))
     _dummy = np.empty((xbow.shape[0], 1))  # timestamps not used in this case
     print(u'\u2713')
 
@@ -125,7 +125,7 @@ def main():
 
         # Define and fit the cross-validated learning model
         model = LogisticRegressionCV(Cs=np.logspace(0, 5, 10),
-                                     penalty='l2',
+                                     penalty='l1',
                                      solver='saga',
                                      cv=PredefinedSplit(test_fold),
                                      n_jobs=-1)
