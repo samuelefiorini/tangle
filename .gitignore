@@ -163,3 +163,5 @@ glove6B/
 *.h5
 
 notebooks/data/
+
+notebooks/models/sequences\.csv\.zip
