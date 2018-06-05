@@ -17,7 +17,7 @@ __C0C1_THRESH__ = 0.75
 def find_continuously_concessionals(pbs_files):
     """"Find continuously concessionals.
 
-    Find subjects that are using concessional cards for at least 50% of the
+    Find subjects that are using concessional cards for at least 75% of the
     years of observation.
 
     Parameters:
@@ -54,7 +54,7 @@ def find_continuously_concessionals(pbs_files):
 def find_consistently_concessionals(pbs_files):
     """Find consistently concessionals.
 
-    Find subjects that use their concessional cards for at least 50% of the PBS
+    Find subjects that use their concessional cards for at least 75% of the PBS
     benefit items of each year.
 
     Parameters:
