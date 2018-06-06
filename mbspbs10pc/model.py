@@ -60,28 +60,28 @@ class Attention(Layer):
     def build(self, input_shape):
         # input_shape is:
         # [(None, n_timestamps, recurrent_hidden_units)]
-        n_timestamps = input_shape[1]
-        n_hidden = input_shape[-1]
+        # Useful quantities
+        self.n_timestamps = input_shape[1]
+        self.n_hidden = input_shape[-1]
 
         # Dense MBS-items weights (tanh activation)
         self.kernel_x = self.add_weight(name='kernel_x',
-                                        shape=(n_timestamps, n_timestamps),
+                                        shape=(self.n_timestamps,
+                                               self.n_timestamps),
                                         initializer='glorot_uniform',
                                         trainable=True)
         # Dense weights (softmax activations)
         self.kernel_a = self.add_weight(name='kernel_a',
-                                        shape=(n_timestamps, n_timestamps),
+                                        shape=(self.n_timestamps,
+                                               self.n_timestamps),
                                         initializer='glorot_uniform',
                                         trainable=True)
         if self.use_bias:
                 self.bias_x = self.add_weight(name='bias_x',
-                                              shape=(n_timestamps,),
+                                              shape=(self.n_hidden,
+                                                     self.n_timestamps),
                                               initializer='zeros',
                                               trainable=True)
-
-        # Other useful variables
-        self.n_timestamps = n_timestamps
-        self.n_hidden = n_hidden
 
         # The output dimension should be the same as the input one
         self.output_dim = input_shape
@@ -135,37 +135,40 @@ class TimestampGuidedAttention(Layer):
         if len(set(timestamps)) > 1:
             raise ValueError('The two inputs should have the same number of '
                              'timestamps. Got {}.'.format(timestamps))
-        n_timestamps = timestamps[0]
-        n_hidden = input_shape[0][-1]
+
+        # Other useful variables
+        self.n_timestamps = timestamps[0]
+        self.n_hidden = input_shape[0][-1]
 
         # Dense MBS-items weights (tanh activation)
         self.kernel_x = self.add_weight(name='kernel_x',
-                                        shape=(n_timestamps, n_timestamps),
+                                        shape=(self.n_timestamps,
+                                               self.n_timestamps),
                                         initializer='glorot_uniform',
                                         trainable=True)
         # Dense timestamp weights (tanh activation)
         self.kernel_t = self.add_weight(name='kernel_t',
-                                        shape=(n_timestamps, n_timestamps),
+                                        shape=(self.n_timestamps,
+                                               self.n_timestamps),
                                         initializer='glorot_uniform',
                                         trainable=True)
         # Dense weights (softmax activations)
         self.kernel_a = self.add_weight(name='kernel_a',
-                                        shape=(n_timestamps, n_timestamps),
+                                        shape=(self.n_timestamps,
+                                               self.n_timestamps),
                                         initializer='glorot_uniform',
                                         trainable=True)
         if self.use_bias:
                 self.bias_x = self.add_weight(name='bias_x',
-                                              shape=(n_timestamps,),
+                                              shape=(self.n_hidden,
+                                                     self.n_timestamps),
                                               initializer='zeros',
                                               trainable=True)
                 self.bias_t = self.add_weight(name='bias_t',
-                                              shape=(n_timestamps,),
+                                              shape=(self.n_hidden,
+                                                     self.n_timestamps),
                                               initializer='zeros',
                                               trainable=True)
-
-        # Other useful variables
-        self.n_timestamps = n_timestamps
-        self.n_hidden = n_hidden
 
         # The output dimension should be the same as the input one
         self.output_dim = input_shape[0]
@@ -176,8 +179,12 @@ class TimestampGuidedAttention(Layer):
         x = Permute((2, 1))(inputs[0])  # transpose input
         t = Permute((2, 1))(inputs[1])
 
+        print('hx: ', x.shape)
+        print('ht: ', x.shape)
+
         # First two dense layers with linear activation
         gamma = K.dot(x, self.kernel_x)
+        print('gamma: ', gamma.shape)
         beta = K.dot(t, self.kernel_t)
         if self.use_bias:
             gamma = K.bias_add(gamma, self.bias_x)
