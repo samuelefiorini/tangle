@@ -180,25 +180,28 @@ class TimestampGuidedAttention(Layer):
         t = Permute((2, 1))(inputs[1])
 
         print('hx: ', x.shape)
-        print('ht: ', x.shape)
+        print('tx: ', t.shape)
 
         # First two dense layers with linear activation
         gamma = K.dot(x, self.kernel_x)
-        print('gamma: ', gamma.shape)
         beta = K.dot(t, self.kernel_t)
         if self.use_bias:
             gamma = K.bias_add(gamma, self.bias_x)
             beta = K.bias_add(beta, self.bias_t)
         gamma = K.tanh(gamma)
         beta = K.tanh(beta)
+        print('gamma: ', gamma.shape)
+        print('beta: ', beta.shape)
 
         # Convex combination of the two resulting tensors
         # lambda * gamma + (1 - lambda) * beta
         delta = ConvexCombination()([gamma, beta])
+        print('delta: ', delta.shape)
 
         # Dense layer with softmax activation (no bias needed)
         alpha = K.softmax(K.dot(delta, self.kernel_a))
         alpha = Permute((2, 1))(alpha)  # transpose back to the original shape
+        print('alpha: ', alpha.shape)
 
         return alpha
 
