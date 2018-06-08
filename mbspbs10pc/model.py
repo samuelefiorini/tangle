@@ -42,16 +42,13 @@ class Attention(Layer):
     def __init__(self, use_bias=True, **kwargs):
         """Implementation of the standard attention layer.
 
-        This implementation follows "Hierarchical Attention Networks for
-        Document Classification" by Yang et al as closely as possible and it
-        is inspired by
-        https://github.com/philipperemy/keras-attention-mechanism.
+        This implementation is inspired by
+        ``https://github.com/philipperemy/keras-attention-mechanism``.
 
         Parameters:
         --------------
-        n_timestamps: int
-            The number of input timestamps defines the size of the dense
-            layers.
+        use_bias: bool
+            Whether the layer uses a bias vector.
         """
         self.use_bias = use_bias
         self.output_dim = None
@@ -112,9 +109,8 @@ class TimestampGuidedAttention(Layer):
 
         Parameters:
         --------------
-        n_timestamps: int
-            The number of input timestamps defines the size of the dense
-            layers.
+        use_bias: bool
+            Whether the layer uses a bias vector.
         """
         self.use_bias = use_bias
         self.output_dim = None
@@ -179,8 +175,8 @@ class TimestampGuidedAttention(Layer):
         x = Permute((2, 1))(inputs[0])  # transpose input
         t = Permute((2, 1))(inputs[1])
 
-        print('hx: ', x.shape)
-        print('tx: ', t.shape)
+        # print('hx: ', x.shape)
+        # print('tx: ', t.shape)
 
         # First two dense layers with linear activation
         gamma = K.dot(x, self.kernel_x)
@@ -190,18 +186,18 @@ class TimestampGuidedAttention(Layer):
             beta = K.bias_add(beta, self.bias_t)
         gamma = K.tanh(gamma)
         beta = K.tanh(beta)
-        print('gamma: ', gamma.shape)
-        print('beta: ', beta.shape)
+        # print('gamma: ', gamma.shape)
+        # print('beta: ', beta.shape)
 
         # Convex combination of the two resulting tensors
         # lambda * gamma + (1 - lambda) * beta
         delta = ConvexCombination()([gamma, beta])
-        print('delta: ', delta.shape)
+        # print('delta: ', delta.shape)
 
         # Dense layer with softmax activation (no bias needed)
         alpha = K.softmax(K.dot(delta, self.kernel_a))
         alpha = Permute((2, 1))(alpha)  # transpose back to the original shape
-        print('alpha: ', alpha.shape)
+        # print('alpha: ', alpha.shape)
 
         return alpha
 
