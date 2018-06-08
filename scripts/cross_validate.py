@@ -154,13 +154,13 @@ def main():
     else:
         embedding_size = 50 # default size
 
-
     # Define the model arguments
     kwargs = {'mbs_input_shape': (maxlen,),
               'timestamp_input_shape': (maxlen, 1),
               'vocabulary_size': vocabulary_size,
               'embedding_size': embedding_size,
               'recurrent_units': 32,
+              'attention_units': 64,
               'dense_units': 32,
               'bidirectional': True,
               'LSTMLayer': LSTM}

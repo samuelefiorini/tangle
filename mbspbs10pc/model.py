@@ -107,15 +107,18 @@ class Attention(Layer):
 
 
 class TimestampGuidedAttention(Layer):
-    def __init__(self, use_bias=True, **kwargs):
+    def __init__(self, units, use_bias=True, **kwargs):
         """Implementation of the Timestamp guided attention layer.
 
         Parameters:
         --------------
-        n_timestamps: int
-            The number of input timestamps defines the size of the dense
-            layers.
+        units: int
+            Dimensionality of the hidden intermediate space.
+
+        use_bias: bool (default = True)
+            Whether the first dense layer uses a bias vector.
         """
+        self.units = units
         self.use_bias = use_bias
         self.output_dim = None
         super(TimestampGuidedAttention, self).__init__(**kwargs)
@@ -138,37 +141,37 @@ class TimestampGuidedAttention(Layer):
 
         # Other useful variables
         self.n_timestamps = timestamps[0]
-        self.n_hidden = input_shape[0][-1]
+        self.recurrent_hidden_units = input_shape[0][-1]
 
         # Dense MBS-items weights (tanh activation)
-        self.kernel_x = self.add_weight(name='kernel_x',
-                                        shape=(self.n_timestamps,
-                                               self.n_timestamps),
-                                        initializer='glorot_uniform',
-                                        trainable=True)
+        # self.kernel_x = self.add_weight(name='kernel_x',
+        #                                 shape=(self.units,
+        #                                        self.recurrent_hidden_units),
+        #                                 initializer='glorot_uniform',
+        #                                 trainable=True)
         # Dense timestamp weights (tanh activation)
-        self.kernel_t = self.add_weight(name='kernel_t',
-                                        shape=(self.n_timestamps,
-                                               self.n_timestamps),
-                                        initializer='glorot_uniform',
-                                        trainable=True)
+        # self.kernel_t = self.add_weight(name='kernel_t',
+        #                                 shape=(self.units,
+        #                                        self.recurrent_hidden_units),
+        #                                 initializer='glorot_uniform',
+        #                                 trainable=True)
         # Dense weights (softmax activations)
-        self.kernel_a = self.add_weight(name='kernel_a',
-                                        shape=(self.n_timestamps,
-                                               self.n_timestamps),
-                                        initializer='glorot_uniform',
-                                        trainable=True)
-        if self.use_bias:
-                self.bias_x = self.add_weight(name='bias_x',
-                                              shape=(self.n_hidden,
-                                                     self.n_timestamps),
-                                              initializer='zeros',
-                                              trainable=True)
-                self.bias_t = self.add_weight(name='bias_t',
-                                              shape=(self.n_hidden,
-                                                     self.n_timestamps),
-                                              initializer='zeros',
-                                              trainable=True)
+        # self.kernel_a = self.add_weight(name='kernel_a',
+        #                                 shape=(self.n_timestamps,
+        #                                        self.n_timestamps),
+        #                                 initializer='glorot_uniform',
+        #                                 trainable=True)
+        # if self.use_bias:
+        #         self.bias_x = self.add_weight(name='bias_x',
+        #                                       shape=(self.units,
+        #                                              self.n_timestamps),
+        #                                       initializer='zeros',
+        #                                       trainable=True)
+        #         self.bias_t = self.add_weight(name='bias_t',
+        #                                       shape=(self.units,
+        #                                              self.n_timestamps),
+        #                                       initializer='zeros',
+        #                                       trainable=True)
 
         # The output dimension should be the same as the input one
         self.output_dim = input_shape[0]
@@ -176,20 +179,26 @@ class TimestampGuidedAttention(Layer):
 
     def call(self, inputs):
         assert len(inputs) == 2
-        x = Permute((2, 1))(inputs[0])  # transpose input
-        t = Permute((2, 1))(inputs[1])
+        # x = Permute((2, 1))(inputs[0])  # transpose input
+        # t = Permute((2, 1))(inputs[1])
+        x = inputs[0]  # transpose input
+        t = inputs[1]
 
         print('hx: ', x.shape)
         print('tx: ', t.shape)
 
         # First two dense layers with linear activation
-        gamma = K.dot(x, self.kernel_x)
-        beta = K.dot(t, self.kernel_t)
-        if self.use_bias:
-            gamma = K.bias_add(gamma, self.bias_x)
-            beta = K.bias_add(beta, self.bias_t)
-        gamma = K.tanh(gamma)
-        beta = K.tanh(beta)
+        gamma = Dense(self.units, use_bias=self.use_bias, activation='tanh')(x)
+        beta = Dense(self.units, use_bias=self.use_bias, activation='tanh')(t)
+
+        # gamma = K.dot(self.kernel_x, x)
+        # print('gamma 1: ', gamma.shape)
+        # beta = K.dot(t, self.kernel_t)
+        # if self.use_bias:
+        #     gamma = K.bias_add(gamma, self.bias_x)
+        #     beta = K.bias_add(beta, self.bias_t)
+        # gamma = K.tanh(gamma)
+        # beta = K.tanh(beta)
         print('gamma: ', gamma.shape)
         print('beta: ', beta.shape)
 
@@ -199,9 +208,14 @@ class TimestampGuidedAttention(Layer):
         print('delta: ', delta.shape)
 
         # Dense layer with softmax activation (no bias needed)
+        delta = Permute((2, 1))(delta)
+        print('delta T: ', delta.shape)
+        # alpha = Dense(self.n_timestamps, use_bias=False, activation='softmax')(delta)
         alpha = K.softmax(K.dot(delta, self.kernel_a))
-        alpha = Permute((2, 1))(alpha)  # transpose back to the original shape
+        # alpha = K.softmax(delta)
         print('alpha: ', alpha.shape)
+        alpha = Permute((2, 1))(alpha)  # transpose back to the original shape
+        print('alpha T: ', alpha.shape)
 
         return alpha
 
@@ -210,8 +224,8 @@ class TimestampGuidedAttention(Layer):
 
 
 def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
-                embedding_size=50, recurrent_units=8, dense_units=16,
-                bidirectional=True, LSTMLayer=LSTM):
+                embedding_size=50, recurrent_units=8, attention_units=8,
+                dense_units=8, bidirectional=True, LSTMLayer=LSTM):
     """Build keras proposed model.
 
     When the `bidirectional` flag is True, this function returns the
@@ -239,7 +253,11 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
     recurrent_units: int (default=8)
         The number of recurrent units in the LSTM layers.
 
-    dense_units: int (default=16)
+    attention_units: int (default=8)
+        The number of intermediate hidden units of the
+        TimestampGuidedAttention layer.
+
+    dense_units: int (default=8)
         The number of dense units in the dense layers.
 
     bidirectional: bool (default=True)
@@ -285,7 +303,8 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
                        name='timestamp_lstm')(timestamp_input)
 
     # -- Timestamp-guided attention -- #
-    alpha = TimestampGuidedAttention(name='tsg_attention')([x1, x2])
+    alpha = TimestampGuidedAttention(units=attention_units,
+                                     name='tsg_attention')([x1, x2])
     # -- Timestamp-guided attention -- #
 
     # Combine channels to get contribution and context
