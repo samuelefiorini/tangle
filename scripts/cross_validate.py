@@ -161,6 +161,7 @@ def main():
               'vocabulary_size': vocabulary_size,
               'embedding_size': embedding_size,
               'recurrent_units': 32,
+              'attention_units': 128,
               'dense_units': 32,
               'bidirectional': True,
               'LSTMLayer': LSTM}

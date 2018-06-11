@@ -13,6 +13,14 @@ from keras.regularizers import l2
 __implemeted_models__ = ['baseline', 'attention', 'proposed']
 
 
+# from: keras/examples/cifar10_cnn_capsule.py
+# define our own softmax function instead of K.softmax
+# because K.softmax can not specify axis.
+def softmax(x, axis=-1):
+    ex = K.exp(x - K.max(x, axis=axis, keepdims=True))
+    return ex / K.sum(ex, axis=axis, keepdims=True)
+
+
 class ConvexCombination(Layer):
     def __init__(self, **kwargs):
         super(ConvexCombination, self).__init__(**kwargs)
@@ -39,7 +47,7 @@ class ConvexCombination(Layer):
 
 
 class Attention(Layer):
-    def __init__(self, use_bias=True, **kwargs):
+    def __init__(self, units, use_bias=True, **kwargs):
         """Implementation of the standard attention layer.
 
         This implementation is inspired by
@@ -47,9 +55,13 @@ class Attention(Layer):
 
         Parameters:
         --------------
+        units: int
+            Dimensionality of the hidden attention space.
+
         use_bias: bool
             Whether the layer uses a bias vector.
         """
+        self.units = units
         self.use_bias = use_bias
         self.output_dim = None
         super(Attention, self).__init__(**kwargs)
@@ -59,24 +71,24 @@ class Attention(Layer):
         # [(None, n_timestamps, recurrent_hidden_units)]
         # Useful quantities
         self.n_timestamps = input_shape[1]
-        self.n_hidden = input_shape[-1]
+        self.n_recurrent_hidden = input_shape[-1]
 
         # Dense MBS-items weights (tanh activation)
         self.kernel_x = self.add_weight(name='kernel_x',
-                                        shape=(self.n_timestamps,
-                                               self.n_timestamps),
+                                        shape=(self.n_recurrent_hidden,
+                                               self.units),
                                         initializer='glorot_uniform',
                                         trainable=True)
+
         # Dense weights (softmax activations)
         self.kernel_a = self.add_weight(name='kernel_a',
-                                        shape=(self.n_timestamps,
-                                               self.n_timestamps),
+                                        shape=(self.units,
+                                               self.n_recurrent_hidden),
                                         initializer='glorot_uniform',
                                         trainable=True)
         if self.use_bias:
                 self.bias_x = self.add_weight(name='bias_x',
-                                              shape=(self.n_hidden,
-                                                     self.n_timestamps),
+                                              shape=(self.units,),
                                               initializer='zeros',
                                               trainable=True)
 
@@ -85,7 +97,8 @@ class Attention(Layer):
         super(Attention, self).build(input_shape)
 
     def call(self, input):
-        x = Permute((2, 1))(input)  # transpose input
+        # x = Permute((2, 1))(input)  # transpose input
+        x = input
 
         # First two dense layers with linear activation
         gamma = K.dot(x, self.kernel_x)
@@ -94,8 +107,9 @@ class Attention(Layer):
         gamma = K.tanh(gamma)
 
         # Dense layer with softmax activation (no bias needed)
-        alpha = K.softmax(K.dot(gamma, self.kernel_a))
-        alpha = Permute((2, 1))(alpha)  # transpose back to the original shape
+        # alpha = K.softmax(K.dot(gamma, self.kernel_a))
+        alpha = softmax(K.dot(gamma, self.kernel_a), axis=-2)
+        # alpha = Permute((2, 1))(alpha)  # transpose back to the original shape
 
         return alpha
 
@@ -104,14 +118,18 @@ class Attention(Layer):
 
 
 class TimestampGuidedAttention(Layer):
-    def __init__(self, use_bias=True, **kwargs):
+    def __init__(self, units=32, use_bias=True, **kwargs):
         """Implementation of the Timestamp guided attention layer.
 
         Parameters:
         --------------
+        units: int
+            Dimensionality of the hidden attention space.
+
         use_bias: bool
             Whether the layer uses a bias vector.
         """
+        self.units = units
         self.use_bias = use_bias
         self.output_dim = None
         super(TimestampGuidedAttention, self).__init__(**kwargs)
@@ -134,35 +152,33 @@ class TimestampGuidedAttention(Layer):
 
         # Other useful variables
         self.n_timestamps = timestamps[0]
-        self.n_hidden = input_shape[0][-1]
+        self.n_recurrent_hidden = input_shape[0][-1]
 
         # Dense MBS-items weights (tanh activation)
         self.kernel_x = self.add_weight(name='kernel_x',
-                                        shape=(self.n_timestamps,
-                                               self.n_timestamps),
+                                        shape=(self.n_recurrent_hidden,
+                                               self.units),
                                         initializer='glorot_uniform',
                                         trainable=True)
         # Dense timestamp weights (tanh activation)
         self.kernel_t = self.add_weight(name='kernel_t',
-                                        shape=(self.n_timestamps,
-                                               self.n_timestamps),
+                                        shape=(self.n_recurrent_hidden,
+                                               self.units),
                                         initializer='glorot_uniform',
                                         trainable=True)
         # Dense weights (softmax activations)
         self.kernel_a = self.add_weight(name='kernel_a',
-                                        shape=(self.n_timestamps,
-                                               self.n_timestamps),
+                                        shape=(self.units,
+                                               self.n_recurrent_hidden),
                                         initializer='glorot_uniform',
                                         trainable=True)
         if self.use_bias:
                 self.bias_x = self.add_weight(name='bias_x',
-                                              shape=(self.n_hidden,
-                                                     self.n_timestamps),
+                                              shape=(self.units,),
                                               initializer='zeros',
                                               trainable=True)
                 self.bias_t = self.add_weight(name='bias_t',
-                                              shape=(self.n_hidden,
-                                                     self.n_timestamps),
+                                              shape=(self.units,),
                                               initializer='zeros',
                                               trainable=True)
 
@@ -172,11 +188,13 @@ class TimestampGuidedAttention(Layer):
 
     def call(self, inputs):
         assert len(inputs) == 2
-        x = Permute((2, 1))(inputs[0])  # transpose input
-        t = Permute((2, 1))(inputs[1])
+        # x = Permute((2, 1))(inputs[0])  # transpose input
+        # t = Permute((2, 1))(inputs[1])
+        x = inputs[0]  # define input
+        t = inputs[1]
 
-        # print('hx: ', x.shape)
-        # print('tx: ', t.shape)
+        print('hx: ', x.shape)
+        print('tx: ', t.shape)
 
         # First two dense layers with linear activation
         gamma = K.dot(x, self.kernel_x)
@@ -186,18 +204,20 @@ class TimestampGuidedAttention(Layer):
             beta = K.bias_add(beta, self.bias_t)
         gamma = K.tanh(gamma)
         beta = K.tanh(beta)
-        # print('gamma: ', gamma.shape)
-        # print('beta: ', beta.shape)
+
+        print('gamma: ', gamma.shape)
+        print('beta: ', beta.shape)
 
         # Convex combination of the two resulting tensors
         # lambda * gamma + (1 - lambda) * beta
         delta = ConvexCombination()([gamma, beta])
-        # print('delta: ', delta.shape)
 
         # Dense layer with softmax activation (no bias needed)
-        alpha = K.softmax(K.dot(delta, self.kernel_a))
-        alpha = Permute((2, 1))(alpha)  # transpose back to the original shape
-        # print('alpha: ', alpha.shape)
+        # delta = Permute((2, 1))(delta)  # transpose convex combo
+        print('delta: ', delta.shape)
+        alpha = softmax(K.dot(delta, self.kernel_a), axis=-2)
+        # alpha = Permute((2, 1))(alpha)  # transpose back to the original shape
+        print('alpha: ', alpha.shape)
 
         return alpha
 
@@ -206,7 +226,8 @@ class TimestampGuidedAttention(Layer):
 
 
 def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
-                embedding_size=50, recurrent_units=8, dense_units=16,
+                embedding_size=50, recurrent_units=8, attention_units=8,
+                dense_units=16,
                 bidirectional=True, LSTMLayer=LSTM):
     """Build keras proposed model.
 
@@ -234,6 +255,9 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
 
     recurrent_units: int (default=8)
         The number of recurrent units in the LSTM layers.
+
+    attention_units: int (default=8)
+        The number of units of the hidden attention representation.
 
     dense_units: int (default=16)
         The number of dense units in the dense layers.
@@ -281,7 +305,8 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
                        name='timestamp_lstm')(timestamp_input)
 
     # -- Timestamp-guided attention -- #
-    alpha = TimestampGuidedAttention(name='tsg_attention')([x1, x2])
+    alpha = TimestampGuidedAttention(attention_units,
+                                     name='tsg_attention')([x1, x2])
     # -- Timestamp-guided attention -- #
 
     # Combine channels to get contribution and context
@@ -305,13 +330,13 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
 
 def build_attention_model(mbs_input_shape, timestamp_input_shape,
                           vocabulary_size, embedding_size=50,
-                          recurrent_units=8, dense_units=16,
+                          recurrent_units=8, attention_units=8, dense_units=16,
                           bidirectional=True, LSTMLayer=LSTM):
     """Build keras attention model.
 
-    This function builds a standard attention model, as in
+    This function builds the standard attention model, as in
     "Hierarchical Attention Networks for Document Classification"
-    by Yang et al.
+    by Yang et al, with a single attention mechanism.
 
     Parameters:
     --------------
@@ -329,7 +354,7 @@ def build_attention_model(mbs_input_shape, timestamp_input_shape,
                        name='mbs_lstm')(e)
 
     # -- Timestamp-guided attention -- #
-    alpha = Attention(name='tsg_attention')(x1)
+    alpha = Attention(attention_units, name='tsg_attention')(x1)
     # -- Timestamp-guided attention -- #
 
     # Combine channels to get contribution and context
