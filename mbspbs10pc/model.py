@@ -89,8 +89,7 @@ class Attention(Layer):
                                         trainable=True)
         if self.use_bias:
                 self.bias_x = self.add_weight(name='bias_x',
-                                              shape=(self.n_timestamps,
-                                                     self.units),
+                                              shape=(self.units,),
                                               initializer='zeros',
                                               trainable=True)
 
@@ -173,13 +172,11 @@ class TimestampGuidedAttention(Layer):
                                         trainable=True)
         if self.use_bias:
                 self.bias_x = self.add_weight(name='bias_x',
-                                              shape=(self.n_timestamps,
-                                                     self.units),
+                                              shape=(self.units,),
                                               initializer='zeros',
                                               trainable=True)
                 self.bias_t = self.add_weight(name='bias_t',
-                                              shape=(self.n_timestamps,
-                                                     self.units),
+                                              shape=(self.units,),
                                               initializer='zeros',
                                               trainable=True)
 
