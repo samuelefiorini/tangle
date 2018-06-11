@@ -16,6 +16,7 @@ __implemeted_models__ = ['baseline', 'attention', 'proposed']
 # from: keras/examples/cifar10_cnn_capsule.py
 # define our own softmax function instead of K.softmax
 # because K.softmax can not specify axis.
+# Thanks this function transposing input is no longer needed
 def softmax(x, axis=-1):
     ex = K.exp(x - K.max(x, axis=axis, keepdims=True))
     return ex / K.sum(ex, axis=axis, keepdims=True)
@@ -98,8 +99,7 @@ class Attention(Layer):
         super(Attention, self).build(input_shape)
 
     def call(self, input):
-        # x = Permute((2, 1))(input)  # transpose input
-        x = input
+        x = input  # notation consistency
 
         # First two dense layers with linear activation
         gamma = K.dot(x, self.kernel_x)
@@ -108,9 +108,7 @@ class Attention(Layer):
         gamma = K.tanh(gamma)
 
         # Dense layer with softmax activation (no bias needed)
-        # alpha = K.softmax(K.dot(gamma, self.kernel_a))
         alpha = softmax(K.dot(gamma, self.kernel_a), axis=-2)
-        # alpha = Permute((2, 1))(alpha)  # transpose back to the original shape
 
         return alpha
 
@@ -191,13 +189,7 @@ class TimestampGuidedAttention(Layer):
 
     def call(self, inputs):
         assert len(inputs) == 2
-        # x = Permute((2, 1))(inputs[0])  # transpose input
-        # t = Permute((2, 1))(inputs[1])
-        x = inputs[0]  # define input
-        t = inputs[1]
-
-        # print('hx: ', x.shape)
-        # print('tx: ', t.shape)
+        x, t = inputs[0], inputs[1]  # define input
 
         # First two dense layers with linear activation
         gamma = K.dot(x, self.kernel_x)
@@ -208,19 +200,12 @@ class TimestampGuidedAttention(Layer):
         gamma = K.tanh(gamma)
         beta = K.tanh(beta)
 
-        # print('gamma: ', gamma.shape)
-        # print('beta: ', beta.shape)
-
         # Convex combination of the two resulting tensors
         # lambda * gamma + (1 - lambda) * beta
         delta = ConvexCombination()([gamma, beta])
 
         # Dense layer with softmax activation (no bias needed)
-        # delta = Permute((2, 1))(delta)  # transpose convex combo
-        # print('delta: ', delta.shape)
         alpha = softmax(K.dot(delta, self.kernel_a), axis=-2)
-        # alpha = Permute((2, 1))(alpha)  # transpose back to the original shape
-        # print('alpha: ', alpha.shape)
 
         return alpha
 
