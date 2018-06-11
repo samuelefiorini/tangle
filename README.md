@@ -1,7 +1,7 @@
 # MBS-PBS 10% dataset utilities
 Python utilities to explore and analyze the Public Release of Linkable 10% sample of Medicare Benefits Scheme (Medicare) and Pharmaceutical Benefits Scheme (PBS) Data.
 
-The main contribution of this project is a bidirectional timestamp-guided attention model that can detect which diabetic patient currently on metformin are likely to be prescribed witha different diabetes control drug in the next future.
+The main contribution of this project is a bidirectional timestamp-guided attention model that can detect which diabetic patient currently on metformin are likely to be prescribed with a different diabetes control drug in the next future.
 
 **Note**: the MBS-PBS 10% is no longer publicly available (see [here](http://www.pbs.gov.au/info/news/2016/08/public-release-of-linkable-10-percent-mbs-and-pbs-data)) and it is not part of this repository.
 
