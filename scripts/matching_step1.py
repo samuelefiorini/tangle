@@ -20,7 +20,6 @@ import joblib as jl
 import os
 
 import pandas as pd
-from tqdm import tqdm
 
 
 def parse_arguments():

@@ -26,8 +26,8 @@ from datetime import datetime
 import joblib as jl
 import numpy as np
 import pandas as pd
-from mbspbs10pc import diabete_utils as d_utils
-from mbspbs10pc.utils import check_input
+from tangle.mbspbs10pc import diabete_utils as d_utils
+from tangle.mbspbs10pc.utils import check_input
 
 
 def parse_arguments():

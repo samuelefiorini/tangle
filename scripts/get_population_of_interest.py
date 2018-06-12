@@ -22,9 +22,9 @@ import os
 from datetime import datetime
 
 import joblib as jl
-from mbspbs10pc import concessionals_utils as c_utils
-from mbspbs10pc import diabete_utils as d_utils
-from mbspbs10pc.utils import check_input
+from tangle.mbspbs10pc import concessionals_utils as c_utils
+from tangle.mbspbs10pc import diabete_utils as d_utils
+from tangle.mbspbs10pc.utils import check_input
 
 
 def parse_arguments():

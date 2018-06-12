@@ -13,8 +13,8 @@ import cPickle as pkl
 import os
 from datetime import datetime
 
-import mbspbs10pc.raw_data_utils as utils
-from mbspbs10pc.utils import check_input
+import tangle.mbspbs10pc.raw_data_utils as utils
+from tangle.mbspbs10pc.utils import check_input
 
 
 def parse_arguments():
