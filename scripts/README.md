@@ -1,9 +1,9 @@
 # Scripts
 
-These scripts are meant to extract relevant information from the raw MBS-PBS 10% dataset.
+The scripts in this folder are meant to extract relevant information from the raw MBS-PBS 10% dataset and to fit/cross-validate linear and recurrent models.
 To run these scripts you are supposed to have to have organized the MBS-PBS 10% dataset in a folder (*e.g.:* `../../../data`).
 
-Scripts developed for Python 2.7.
+Python 2.7 is required.
 
 ## Usage and details
 ### - `get_population_of_interest.py`
@@ -90,22 +90,22 @@ Run the matching algorithm by CEM package and generate a `matched_CEM_table.csv`
 
 Usage example:
 
-`$ python scripts/single_train.py --labels <PATH-TO matched_CEM_table.csv> --data <PATH-TO raw_data_.pkl> --embedding <PATH-TO embedding.100d.csv> --model proposed --output <PATH-TO-OUTPUT>`
+`$ python scripts/single_train.py --labels <PATH-TO matched_CEM_table.csv> --data <PATH-TO raw_data_.pkl> --embedding <PATH-TO embedding.100d.csv> --model tangle --output <PATH-TO-OUTPUT>`
 
 or, equivalently:
 
-`$ python scripts/single_train.py -l <PATH-TO matched_CEM_table.csv> -d <PATH-TO raw_data_.pkl> -e <PATH-TO embedding.100d.csv> -m proposed -o <PATH-TO-OUTPUT>`
+`$ python scripts/single_train.py -l <PATH-TO matched_CEM_table.csv> -d <PATH-TO raw_data_.pkl> -e <PATH-TO embedding.100d.csv> -m tangle -o <PATH-TO-OUTPUT>`
 
-Fit the bidirectional timestamp-guided model on a random training/validation/test split of the matched dataset.
+Fit **TANGLE** on a random training/validation/test split of the matched dataset.
 
 ### - `cross_validate.py`
 
 Usage example:
 
-`$ python scripts/cross_validate.py --n_splits N --labels <PATH-TO matched_CEM_table.csv> --data <PATH-TO raw_data_.pkl> --embedding <PATH-TO embedding.100d.csv> --output <PATH-TO-OUTPUT>`
+`$ python scripts/cross_validate.py --n_splits N --labels <PATH-TO matched_CEM_table.csv> --data <PATH-TO raw_data_.pkl> --embedding <PATH-TO embedding.100d.csv> --model tangle --output <PATH-TO-OUTPUT>`
 
 or, equivalently:
 
-`$ python scripts/cross_validate.py -n N -l <PATH-TO matched_CEM_table.csv> -d <PATH-TO raw_data_.pkl> -e <PATH-TO embedding.100d.csv> -o <PATH-TO-OUTPUT>`
+`$ python scripts/cross_validate.py -n N -l <PATH-TO matched_CEM_table.csv> -d <PATH-TO raw_data_.pkl> -e <PATH-TO embedding.100d.csv> -m tangle -o <PATH-TO-OUTPUT>`
 
 Evaluate the average predictive performance of the model on N random training/validation/test splits.
