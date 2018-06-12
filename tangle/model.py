@@ -5,12 +5,11 @@ Keras implementation.
 from keras import backend as K
 from keras.engine.topology import Layer
 from keras.layers import (LSTM, Bidirectional, Dense, Dot, Dropout,
-                          Embedding, GlobalAveragePooling1D, Input, Multiply,
-                          Permute)
+                          Embedding, GlobalAveragePooling1D, Input, Multiply)
 from keras.models import Model
 from keras.regularizers import l2
 
-__implemeted_models__ = ['baseline', 'attention', 'proposed']
+__implemeted_models__ = ['baseline', 'attention', 'tangle']
 
 
 # from: keras/examples/cifar10_cnn_capsule.py
@@ -210,15 +209,12 @@ class TimestampGuidedAttention(Layer):
         return self.output_dim
 
 
-def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
-                embedding_size=50, recurrent_units=8, attention_units=8,
-                dense_units=16,
-                bidirectional=True, LSTMLayer=LSTM):
-    """Build keras proposed model.
+def build_tangle(mbs_input_shape, timestamp_input_shape, vocabulary_size,
+                 embedding_size=50, recurrent_units=8, attention_units=8,
+                 dense_units=16,
+                 bidirectional=True, LSTMLayer=LSTM):
+    """Build the keras tangle model.
 
-    When the `bidirectional` flag is True, this function returns the
-    bidirectional timestamp-guided attention model. Otherwise LSTMLayers flow
-    forward only.
 
     Parameters:
     --------------
