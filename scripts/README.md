@@ -108,4 +108,17 @@ or, equivalently:
 
 `$ python scripts/cross_validate.py -n N -l <PATH-TO matched_CEM_table.csv> -d <PATH-TO raw_data_.pkl> -e <PATH-TO embedding.100d.csv> -m tangle -o <PATH-TO-OUTPUT>`
 
-Evaluate the average predictive performance of the model on N random training/validation/test splits.
+Evaluate the average predictive performance of **TANGLE** on N random training/validation/test splits.
+
+### - `cross_validate_linear_model.py`
+
+Usage example:
+
+`$ python scripts/cross_validate_linear_model.py --n_splits N --ngram G --labels <PATH-TO matched_CEM_table.csv> --data <PATH-TO raw_data_.pkl> --output <PATH-TO-OUTPUT>`
+
+or, equivalently:
+
+`$ python scripts/cross_validate_linear_model.py -n N -ng G -l <PATH-TO matched_CEM_table.csv> -d <PATH-TO raw_data_.pkl> -o <PATH-TO-OUTPUT>`
+
+Evaluate the average predictive performance of linear models (x-BOW + Logit) on N random training/validation/test splits.
+
