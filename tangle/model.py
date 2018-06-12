@@ -1,4 +1,4 @@
-"""Bidirectional timestamp-guided attention model.
+"""Bidirectional timespan-guided neural attention model.
 
 Keras implementation.
 """
@@ -28,8 +28,8 @@ class ConvexCombination(Layer):
     def build(self, input_shape):
         _, n_hidden, _ = input_shape[0]
         # input_shape is:
-        # [(None, recurrent_hidden_units, n_timestamps),
-        #  (None, recurrent_hidden_units, n_timestamps)]
+        # [(None, recurrent_hidden_units, n_timespans),
+        #  (None, recurrent_hidden_units, n_timespans)]
         # Adding one dimension for broadcasting
         self.lambd = self.add_weight(name='lambda',
                                      shape=(n_hidden, 1),
@@ -39,14 +39,14 @@ class ConvexCombination(Layer):
 
     def call(self, x):
         # x is a list of two tensors with
-        # shape=(batch_size, recurrent_hidden_units, n_timestamps)
+        # shape=(batch_size, recurrent_hidden_units, n_timespans)
         return self.lambd * x[0] + (1 - self.lambd) * x[1]
 
     def compute_output_shape(self, input_shape):
         return input_shape[0]
 
 
-class Attention(Layer):
+class NeuralAttention(Layer):
     def __init__(self, units, use_bias=True, **kwargs):
         """Implementation of the standard attention layer.
 
@@ -64,13 +64,13 @@ class Attention(Layer):
         self.units = units
         self.use_bias = use_bias
         self.output_dim = None
-        super(Attention, self).__init__(**kwargs)
+        super(NeuralAttention, self).__init__(**kwargs)
 
     def build(self, input_shape):
         # input_shape is:
-        # [(None, n_timestamps, recurrent_hidden_units)]
+        # [(None, n_timespans, recurrent_hidden_units)]
         # Useful quantities
-        self.n_timestamps = input_shape[1]
+        self.n_timespans = input_shape[1]
         self.n_recurrent_hidden = input_shape[-1]
 
         # Dense MBS-items weights (tanh activation)
@@ -94,7 +94,7 @@ class Attention(Layer):
 
         # The output dimension should be the same as the input one
         self.output_dim = input_shape
-        super(Attention, self).build(input_shape)
+        super(NeuralAttention, self).build(input_shape)
 
     def call(self, input):
         x = input  # notation consistency
@@ -114,9 +114,9 @@ class Attention(Layer):
         return self.output_dim
 
 
-class TimestampGuidedAttention(Layer):
+class TimespanGuidedNeuralAttention(Layer):
     def __init__(self, units=32, use_bias=True, **kwargs):
-        """Implementation of the Timestamp guided attention layer.
+        """Implementation of the timespan-guided neural attention layer.
 
         Parameters:
         --------------
@@ -129,12 +129,12 @@ class TimestampGuidedAttention(Layer):
         self.units = units
         self.use_bias = use_bias
         self.output_dim = None
-        super(TimestampGuidedAttention, self).__init__(**kwargs)
+        super(TimespanGuidedNeuralAttention, self).__init__(**kwargs)
 
     def build(self, input_shape):
         # input_shape is:
-        # [(None, n_timestamps, recurrent_hidden_units),
-        #  (None, n_timestamps, recurrent_hidden_units)]
+        # [(None, n_timespans, recurrent_hidden_units),
+        #  (None, n_timespans, recurrent_hidden_units)]
         if not isinstance(input_shape, list):
             raise ValueError('This layer should be called '
                              'on a list of 2 inputs.')
@@ -142,13 +142,13 @@ class TimestampGuidedAttention(Layer):
             raise ValueError('This layer should be called '
                              'on a list of 2 inputs. '
                              'Got ' + str(len(input_shape)) + ' inputs.')
-        timestamps = [s[1] for s in input_shape if s is not None]
-        if len(set(timestamps)) > 1:
+        timespans = [s[1] for s in input_shape if s is not None]
+        if len(set(timespans)) > 1:
             raise ValueError('The two inputs should have the same number of '
-                             'timestamps. Got {}.'.format(timestamps))
+                             'timespans. Got {}.'.format(timespans))
 
         # Other useful variables
-        self.n_timestamps = timestamps[0]
+        self.n_timespans = timespans[0]
         self.n_recurrent_hidden = input_shape[0][-1]
 
         # Dense MBS-items weights (tanh activation)
@@ -157,7 +157,7 @@ class TimestampGuidedAttention(Layer):
                                                self.units),
                                         initializer='glorot_uniform',
                                         trainable=True)
-        # Dense timestamp weights (tanh activation)
+        # Dense timespan weights (tanh activation)
         self.kernel_t = self.add_weight(name='kernel_t',
                                         shape=(self.n_recurrent_hidden,
                                                self.units),
@@ -181,7 +181,7 @@ class TimestampGuidedAttention(Layer):
 
         # The output dimension should be the same as the input one
         self.output_dim = input_shape[0]
-        super(TimestampGuidedAttention, self).build(input_shape)
+        super(TimespanGuidedNeuralAttention, self).build(input_shape)
 
     def call(self, inputs):
         assert len(inputs) == 2
@@ -209,7 +209,7 @@ class TimestampGuidedAttention(Layer):
         return self.output_dim
 
 
-def build_tangle(mbs_input_shape, timestamp_input_shape, vocabulary_size,
+def build_tangle(mbs_input_shape, timespan_input_shape, vocabulary_size,
                  embedding_size=50, recurrent_units=8, attention_units=8,
                  dense_units=16,
                  bidirectional=True, LSTMLayer=LSTM):
@@ -223,8 +223,8 @@ def build_tangle(mbs_input_shape, timestamp_input_shape, vocabulary_size,
         `(maxlen,)` where `maxlen` is the maximum number of elements in a
         sequence.
 
-    timestamp_input_shape: list
-        Shape of the timestamp sequence input. It should be `(maxlen, 1)`.
+    timespan_input_shape: list
+        Shape of the timespan sequence input. It should be `(maxlen, 1)`.
 
     vocabulary_size: int
         The size of the tokenizer vocabulary. This parameter is used to build
@@ -246,12 +246,12 @@ def build_tangle(mbs_input_shape, timestamp_input_shape, vocabulary_size,
     bidirectional: bool (default=True)
         This flag control wether or bidirectional LSTM layers should be used.
 
-    LSTMLayer: keras.layer(default=keras.layer.LSTM)
+    LSTMLayer: keras.layer (default=keras.layer.LSTM)
         This parameter controls which implementation of the LSTM layer should
          be used. There are two possibilities:
             - `keras.layer.LSTM`: slower implementation, that enables the use
               of recurrent dropout and the extraction of the activations by
-              `mbspbs10pc.read_activations.get_activations()`
+              `tangle.read_activations.get_activations()`
             - `keras.layer.CuDNNLSTM`: faster CuDNN implementation of the LSTM
               layer where recurrent dropout is not available nor the
               extraction of the activations.
@@ -275,19 +275,19 @@ def build_tangle(mbs_input_shape, timestamp_input_shape, vocabulary_size,
         x1 = LSTMLayer(recurrent_units, return_sequences=True,
                        name='mbs_lstm')(e)
 
-    # Channel 2: Timestamps
-    timestamp_input = Input(shape=timestamp_input_shape,
-                            name='timestamp_input')
+    # Channel 2: Timespans
+    timespan_input = Input(shape=timespan_input_shape,
+                           name='timespan_input')
     if bidirectional:
         x2 = Bidirectional(LSTMLayer(recurrent_units, return_sequences=True),
-                           name='timestamp_lstm')(timestamp_input)
+                           name='timespan_lstm')(timespan_input)
     else:
         x2 = LSTMLayer(recurrent_units, return_sequences=True,
-                       name='timestamp_lstm')(timestamp_input)
+                       name='timespan_lstm')(timespan_input)
 
-    # Timestamp-Guided attention weights
-    alpha = TimestampGuidedAttention(attention_units,
-                                     name='tsg_attention')([x1, x2])
+    # Timespan-guided neural attention weights
+    alpha = TimespanGuidedNeuralAttention(attention_units,
+                                          name='tangle_attention')([x1, x2])
 
     # Combine channels to get contribution and context
     c = Multiply(name='contribution')([alpha, x1])
@@ -302,13 +302,13 @@ def build_tangle(mbs_input_shape, timestamp_input_shape, vocabulary_size,
                    activity_regularizer=l2(0.002))(x)
 
     # Define the model
-    model = Model(inputs=[mbs_input, timestamp_input],
+    model = Model(inputs=[mbs_input, timespan_input],
                   outputs=[output])
 
     return model
 
 
-def build_attention_model(mbs_input_shape, timestamp_input_shape,
+def build_attention_model(mbs_input_shape, timespan_input_shape,
                           vocabulary_size, embedding_size=50,
                           recurrent_units=8, attention_units=8, dense_units=16,
                           bidirectional=True, LSTMLayer=LSTM):
@@ -320,7 +320,52 @@ def build_attention_model(mbs_input_shape, timestamp_input_shape,
 
     Parameters:
     --------------
-    see `build_model()`
+    mbs_input_shape: list
+        Shape of the MBS sequence input. This parameter should be equal to
+        `(maxlen,)` where `maxlen` is the maximum number of elements in a
+        sequence.
+
+    timespan_input_shape: list
+        Shape of the timespan sequence input. It should be `(maxlen, 1)`.
+        Unused, added for consistency only.
+
+    vocabulary_size: int
+        The size of the tokenizer vocabulary. This parameter is used to build
+        the embedding matrix.
+
+    embedding_size: int (default=50)
+        The size of the used word embedding, it should be in [50, 100, 200,
+        300] according to `glove.6B`.
+
+    recurrent_units: int (default=8)
+        The number of recurrent units in the LSTM layers.
+
+    attention_units: int (default=8)
+        The number of units of the hidden attention representation.
+
+    dense_units: int (default=16)
+        The number of dense units in the dense layers.
+
+    bidirectional: bool (default=True)
+        This flag control wether or bidirectional LSTM layers should be used.
+
+    LSTMLayer: keras.layer (default=keras.layer.LSTM)
+        This parameter controls which implementation of the LSTM layer should
+         be used. There are two possibilities:
+            - `keras.layer.LSTM`: slower implementation, that enables the use
+              of recurrent dropout and the extraction of the activations by
+              `tangle.read_activations.get_activations()`
+            - `keras.layer.CuDNNLSTM`: faster CuDNN implementation of the LSTM
+              layer where recurrent dropout is not available nor the
+              extraction of the activations.
+        Best practice is to use the fast implementation for training and the
+        slow one for attention extraction.
+        For more info see https://keras.io/layers/recurrent/.
+
+    Returns:
+    --------------
+    model: keras.Model object
+        Keras implementation of the model.
     """
     # Channel 1: MBS
     mbs_input = Input(shape=mbs_input_shape, name='mbs_input')
@@ -334,7 +379,7 @@ def build_attention_model(mbs_input_shape, timestamp_input_shape,
                        name='mbs_lstm')(e)
 
     # Attention weights
-    alpha = Attention(attention_units, name='tsg_attention')(x1)
+    alpha = NeuralAttention(attention_units, name='attention')(x1)
 
     # Combine channels to get contribution and context
     c = Multiply(name='contribution')([alpha, x1])
@@ -355,7 +400,7 @@ def build_attention_model(mbs_input_shape, timestamp_input_shape,
     return model
 
 
-def build_baseline_model(mbs_input_shape, timestamp_input_shape,
+def build_baseline_model(mbs_input_shape, timespan_input_shape,
                          vocabulary_size, embedding_size=50, recurrent_units=8,
                          dense_units=16, bidirectional=True, LSTMLayer=LSTM):
     """Build keras baseline model.
@@ -364,7 +409,52 @@ def build_baseline_model(mbs_input_shape, timestamp_input_shape,
 
     Parameters:
     --------------
-    see `build_model()`
+    mbs_input_shape: list
+        Shape of the MBS sequence input. This parameter should be equal to
+        `(maxlen,)` where `maxlen` is the maximum number of elements in a
+        sequence.
+
+    timespan_input_shape: list
+        Shape of the timespan sequence input. It should be `(maxlen, 1)`.
+        Unused, added for consistency only.
+
+    vocabulary_size: int
+        The size of the tokenizer vocabulary. This parameter is used to build
+        the embedding matrix.
+
+    embedding_size: int (default=50)
+        The size of the used word embedding, it should be in [50, 100, 200,
+        300] according to `glove.6B`.
+
+    recurrent_units: int (default=8)
+        The number of recurrent units in the LSTM layers.
+
+    attention_units: int (default=8)
+        The number of units of the hidden attention representation.
+
+    dense_units: int (default=16)
+        The number of dense units in the dense layers.
+
+    bidirectional: bool (default=True)
+        This flag control wether or bidirectional LSTM layers should be used.
+
+    LSTMLayer: keras.layer (default=keras.layer.LSTM)
+        This parameter controls which implementation of the LSTM layer should
+         be used. There are two possibilities:
+            - `keras.layer.LSTM`: slower implementation, that enables the use
+              of recurrent dropout and the extraction of the activations by
+              `tangle.read_activations.get_activations()`
+            - `keras.layer.CuDNNLSTM`: faster CuDNN implementation of the LSTM
+              layer where recurrent dropout is not available nor the
+              extraction of the activations.
+        Best practice is to use the fast implementation for training and the
+        slow one for attention extraction.
+        For more info see https://keras.io/layers/recurrent/.
+
+    Returns:
+    --------------
+    model: keras.Model object
+        Keras implementation of the model.
     """
     # Channel 1: MBS
     mbs_input = Input(shape=mbs_input_shape, name='mbs_input')
