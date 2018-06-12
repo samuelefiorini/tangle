@@ -132,8 +132,8 @@ def tokenize(data, maxlen=250):
     padded_mbs_seq: array
         Padded sequence of MBS items.
 
-    padded_timestamp_seq: array
-        Padded sequence of timestamps.
+    padded_timespan_seq: array
+        Padded sequence of timespans.
 
     tokenizer: keras.preprocessing.text.Tokenizer
         The tokenizer object fit on the input data.
@@ -151,14 +151,14 @@ def tokenize(data, maxlen=250):
     padded_mbs_seq = pad_sequences(seq, maxlen=maxlen, padding='pre',
                                    truncating='pre', value=0)
 
-    # Pad timestamps
+    # Pad timespans
     t_seq = [map(int, data.loc[idx, 'times_seq'].split(' '))
              for idx in data.index]
-    padded_timestamp_seq = pad_sequences(t_seq, maxlen=maxlen,
-                                         padding='pre', truncating='pre',
-                                         value=-1)
+    padded_timespan_seq = pad_sequences(t_seq, maxlen=maxlen,
+                                        padding='pre', truncating='pre',
+                                        value=-1)
 
-    return padded_mbs_seq, padded_timestamp_seq, tokenizer
+    return padded_mbs_seq, padded_timespan_seq, tokenizer
 
 
 def train_validation_test_split(data, labels, test_size=0.4,
@@ -169,7 +169,7 @@ def train_validation_test_split(data, labels, test_size=0.4,
     Parameters:
     --------------
     data: list
-        A list made as follows `[padded_mbs_seq, padded_timestamp_seq]`
+        A list made as follows `[padded_mbs_seq, padded_timespan_seq]`
 
     labels: array
         Labels vector returned by `load_data_labels()`.
@@ -193,7 +193,7 @@ def train_validation_test_split(data, labels, test_size=0.4,
     --------------
     train_set: tuple
         A tuple like `(train_data, y_train)` where `train_data` is a list
-        like [MBS training sequence, timestamp training sequence].
+        like [MBS training sequence, timespan training sequence].
 
     validation_set: tuple
         Same as `train_set`, but for validation set.
