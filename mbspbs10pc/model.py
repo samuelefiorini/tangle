@@ -289,10 +289,9 @@ def build_model(mbs_input_shape, timestamp_input_shape, vocabulary_size,
         x2 = LSTMLayer(recurrent_units, return_sequences=True,
                        name='timestamp_lstm')(timestamp_input)
 
-    # -- Timestamp-guided attention -- #
+    # Timestamp-Guided attention weights
     alpha = TimestampGuidedAttention(attention_units,
                                      name='tsg_attention')([x1, x2])
-    # -- Timestamp-guided attention -- #
 
     # Combine channels to get contribution and context
     c = Multiply(name='contribution')([alpha, x1])
@@ -338,9 +337,8 @@ def build_attention_model(mbs_input_shape, timestamp_input_shape,
         x1 = LSTMLayer(recurrent_units, return_sequences=True,
                        name='mbs_lstm')(e)
 
-    # -- Timestamp-guided attention -- #
+    # Attention weights
     alpha = Attention(attention_units, name='tsg_attention')(x1)
-    # -- Timestamp-guided attention -- #
 
     # Combine channels to get contribution and context
     c = Multiply(name='contribution')([alpha, x1])
