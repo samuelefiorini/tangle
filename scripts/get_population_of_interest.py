@@ -62,7 +62,7 @@ def init_main():
 def main():
     """Main get_population_of_interest.py routine."""
     print('-------------------------------------------------------------------')
-    print('MBS - PBS 10% dataset utility: get_population_of_interest.py')
+    print('>> get_population_of_interest.py')
     print('-------------------------------------------------------------------')
     args = init_main()
 

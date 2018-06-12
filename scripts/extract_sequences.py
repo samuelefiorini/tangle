@@ -64,7 +64,7 @@ def init_main():
 def main():
     """Main find_concessionas.py routine."""
     print('-------------------------------------------------------------------')
-    print('MBS - PBS 10% dataset utility: extract_sequences.py')
+    print('>> extract_sequences.py')
     print('-------------------------------------------------------------------')
     args = init_main()
 

@@ -54,7 +54,7 @@ def init_main():
 def main():
     """Main matching_step1.py routine."""
     print('-------------------------------------------------------------------')
-    print('MBS - PBS 10% dataset utility: matching_step1.py')
+    print('>> matching_step1.py')
     print('-------------------------------------------------------------------')
     args = init_main()
 

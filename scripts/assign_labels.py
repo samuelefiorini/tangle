@@ -72,7 +72,7 @@ def init_main():
 def main():
     """Main assign_labels.py routine."""
     print('-------------------------------------------------------------------')
-    print('MBS - PBS 10% dataset utility: assign_labels.py')
+    print('>> assign_labels.py')
     print('-------------------------------------------------------------------')
     args = init_main()
 
