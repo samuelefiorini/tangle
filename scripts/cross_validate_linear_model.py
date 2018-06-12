@@ -16,8 +16,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy as sp
 import pandas as pd
-from mbspbs10pc.plotting import plot_roc_curve
-from mbspbs10pc.utils import load_data_labels, train_validation_test_split
+from tangle.plotting import plot_roc_curve
+from tangle.utils import load_data_labels, train_validation_test_split
 from sklearn import metrics
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.linear_model import LogisticRegressionCV
@@ -26,7 +26,7 @@ from sklearn.model_selection import PredefinedSplit
 
 def parse_arguments():
     """"Parse input arguments."""
-    parser = argparse.ArgumentParser(description='Bi-Timestamp-guided model '
+    parser = argparse.ArgumentParser(description='Linear model (x-BOW + logit)'
                                                  'cross-validation.')
     parser.add_argument('-n', '--n_splits', type=int,
                         help='Number of re-shuffling & splitting iterations.',
@@ -69,7 +69,7 @@ def init_main():
 def main():
     """Main train.py routine."""
     print('-------------------------------------------------------------------')
-    print('MBS - PBS 10% dataset utility: cross_validate_linear_model.py')
+    print('>> cross_validate_linear_model.py')
     print('-------------------------------------------------------------------')
     args = init_main()
 
@@ -90,7 +90,7 @@ def main():
                           tokenizer=lambda x: x.split(' '))
     xbow = bow.fit_transform(dataset['mbs_seq'])
     xbow = sp.sparse.csr_matrix(xbow / xbow.sum(axis=1))
-    _dummy = np.empty((xbow.shape[0], 1))  # timestamps not used in this case
+    _dummy = np.empty((xbow.shape[0], 1))  # timespans not used in this case
     print(u'\u2713')
 
     # Start to cross-validate the model
@@ -188,17 +188,7 @@ def main():
     plt.savefig(args.output + '_roc.png')
     print(u'\u2713')
 
-
-
-
-
-
-
-
-
-
 ################################################################################
-
 
 if __name__ == '__main__':
     warnings.filterwarnings('ignore')

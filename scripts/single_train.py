@@ -45,8 +45,8 @@ def parse_arguments():
                         help="""Which model should be used. Argument must be
                         either: 'baseline' for Embedding + LSTM only
                         , 'attention' for Embedding + LSTM with standard
-                        attention or 'tangle' for timespan-guided neural '
-                        'attention (default)""",
+                        attention or 'tangle' for Embedding + LSTM with '
+                        'timespan-guided neural attention (default)""",
                         default='tangle')
     parser.add_argument('-o', '--output', type=str,
                         help='Ouput file name root.',
@@ -142,17 +142,17 @@ def main():
 
     # Tokenize and pad
     print('* Preparing data...', end=' ')
-    padded_mbs_seq, padded_timestamp_seq, _ = tokenize(dataset)
+    padded_mbs_seq, padded_timespan_seq, _ = tokenize(dataset)
     maxlen = padded_mbs_seq.shape[1]
 
     # Split in training, validation, test sets
     tr_set, v_set, ts_set = train_validation_test_split(
-        [padded_mbs_seq, padded_timestamp_seq], dataset['Class'],
+        [padded_mbs_seq, padded_timespan_seq], dataset['Class'],
         test_size=0.4, validation_size=0.1,
         verbose=False, random_state0=42, random_state1=420)
     print(u'\u2713')
 
-    # Drop the timestamps when not needed
+    # Drop the timespans when not needed
     if args.model.lower() in ['baseline', 'attention']:
         tr_set = (tr_set[0][0], tr_set[1])
         v_set = (v_set[0][0], v_set[1])
@@ -160,7 +160,7 @@ def main():
 
     # Define the model arguments
     kwargs = {'mbs_input_shape': (maxlen,),
-              'timestamp_input_shape': (maxlen, 1),
+              'timespan_input_shape': (maxlen, 1),
               'vocabulary_size': embedding_matrix.shape[0],
               'embedding_size': embedding_matrix.shape[1],
               'recurrent_units': 32,

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-"""Cross-validate bidirectional timestamp-guided attention model.
+"""Cross-validate recurrent models.
 
-Cross-validate the keras model on the data extracted by `extract_sequences.py`
+Cross-validate keras models on the data extracted by `extract_sequences.py`
 and matched by CEM (see `matching_step1.py` and `matching_step2.R`).
 """
 
@@ -17,18 +17,19 @@ import pandas as pd
 from keras import backend as K
 from keras import optimizers as opt
 from keras.layers import CuDNNLSTM as LSTM
-from mbspbs10pc.fit_utils import concatenate_history, get_callbacks
-from mbspbs10pc.model import (__implemeted_models__, build_attention_model,
-                              build_baseline_model, build_model)
-from mbspbs10pc.plotting import plot_history, plot_roc_curve
-from mbspbs10pc.utils import (load_data_labels, tokenize,
-                              train_validation_test_split)
+from tangle.fit_utils import concatenate_history, get_callbacks
+from tangle.model import (__implemeted_models__, build_attention_model,
+                          build_baseline_model, build_tangle)
+from tangle.plotting import plot_history, plot_roc_curve
+from tangle.utils import (load_data_labels, tokenize,
+                          train_validation_test_split)
 from sklearn import metrics
 
 
 def parse_arguments():
     """"Parse input arguments."""
-    parser = argparse.ArgumentParser(description='Bi-Timestamp-guided model '
+    parser = argparse.ArgumentParser(description='Recurrent models (baseline, '
+                                                 'attention, tangle) '
                                                  'cross-validation.')
     parser.add_argument('-n', '--n_splits', type=int,
                         help='Number of re-shuffling & splitting iterations.',
@@ -48,9 +49,9 @@ def parse_arguments():
                         help="""Which model should be used. Argument must be
                         either: 'baseline' for Embedding + LSTM only
                         , 'attention' for Embedding + LSTM with standard
-                        attention or 'proposed' for bidirectional
-                        timestamp-guided attention model (default)""",
-                        default='proposed')
+                        attention or 'tangle' for Embedding + LSTM with '
+                        'timespan-guided neural attention (default)""",
+                        default='tangle')
     parser.add_argument('-o', '--output', type=str,
                         help='Ouput file name root.',
                         default=None)
@@ -124,7 +125,7 @@ def fit_model(model, training_set, validation_set, outputfile,
 def main():
     """Main train.py routine."""
     print('-------------------------------------------------------------------')
-    print('MBS - PBS 10% dataset utility: cross_validate.py')
+    print('>> cross_validate.py')
     print('-------------------------------------------------------------------')
     args = init_main()
 
@@ -140,7 +141,7 @@ def main():
 
     # Tokenize and pad
     print('* Preparing data...', end=' ')
-    padded_mbs_seq, padded_timestamp_seq, tokenizer = tokenize(dataset)
+    padded_mbs_seq, padded_timespan_seq, tokenizer = tokenize(dataset)
     maxlen = padded_mbs_seq.shape[1]
     vocabulary_size = len(tokenizer.word_index.keys()) + 1  # add the 0 row
 
@@ -154,10 +155,9 @@ def main():
     else:
         embedding_size = 50 # default size
 
-
     # Define the model arguments
     kwargs = {'mbs_input_shape': (maxlen,),
-              'timestamp_input_shape': (maxlen, 1),
+              'timespan_input_shape': (maxlen, 1),
               'vocabulary_size': vocabulary_size,
               'embedding_size': embedding_size,
               'recurrent_units': 32,
@@ -180,11 +180,11 @@ def main():
         print('-------- SPLIT {} --------'.format(k))
         # Split in training, validation, test sets
         tr_set, v_set, ts_set = train_validation_test_split(
-            [padded_mbs_seq, padded_timestamp_seq], dataset['Class'],
+            [padded_mbs_seq, padded_timespan_seq], dataset['Class'],
             test_size=0.4, validation_size=0.1,
             verbose=False, random_state0=k, random_state1=2*k)
 
-        # Drop the timestamps when not needed
+        # Drop the timespans when not needed
         if args.model.lower() in ['baseline', 'attention']:
             tr_set = (tr_set[0][0], tr_set[1])
             v_set = (v_set[0][0], v_set[1])
@@ -197,8 +197,10 @@ def main():
             model = build_baseline_model(**kwargs)
         elif args.model.lower() == 'attention':
             model = build_attention_model(**kwargs)
-        elif args.model.lower() == 'proposed':
-            model = build_model(**kwargs)
+        elif args.model.lower() == 'tangle':
+            model = build_tangle(**kwargs)
+        else:
+            raise ValueError('Model {} not known.'.format(args.model.lower()))
 
         # Initialize the embedding matrix
         if args.embedding is not None:
