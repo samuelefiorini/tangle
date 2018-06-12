@@ -1,23 +1,23 @@
 #!/usr/bin/python
-"""mbspbs10pc setup script."""
+"""tangle setup script."""
 
 from setuptools import setup
 
 # Package Version
-from mbspbs10pc import __version__ as version
+from tangle import __version__ as version
 
 setup(
-    name='mbspbs10pc',
+    name='tangle',
     version=version,
 
     description=("MBS-PBS 10% dataset utilities"),
     long_description=open('README.md').read(),
-    author='Samuele Fiorini, Farshid Hajati, Federico Girosi',
+    author='Samuele Fiorini, Farshid Hajati, Annalisa Barla, Federico Girosi',
     author_email='samuele.fiorini@dibris.unige.it',
     maintainer='Samuele Fiorini',
     maintainer_email='samuele.fiorini@dibris.unige.it',
     url='https://github.com/samuelefiorini/mbspbs10pc',
-    download_url='https://github.com/samuelefiorini/mbspbs10pc/tarball/' + version,
+    download_url='https://github.com/samuelefiorini/tangle/tarball/' + version,
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
@@ -33,7 +33,7 @@ setup(
     ],
     license='FreeBSD',
 
-    packages=['mbspbs10pc'],
+    packages=['tangle'],
     install_requires=['pandas (>=0.22.0)',
                       'setuptools (>=39.0.1)',
                       'numpy (>=1.14.2)',
