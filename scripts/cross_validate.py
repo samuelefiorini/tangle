@@ -21,8 +21,8 @@ from tangle.fit_utils import concatenate_history, get_callbacks
 from tangle.model import (__implemeted_models__, build_attention_model,
                           build_baseline_model, build_tangle)
 from tangle.plotting import plot_history, plot_roc_curve
-from tangle.utils import (load_data_labels, tokenize,
-                          train_validation_test_split)
+from tangle.mbspbs10pc.utils import (load_data_labels, tokenize,
+                                     train_validation_test_split)
 from sklearn import metrics
 
 
@@ -127,6 +127,7 @@ def main():
     print('-------------------------------------------------------------------')
     print('>> cross_validate.py')
     print('-------------------------------------------------------------------')
+    plt.switch_backend('agg')
     args = init_main()
 
     print('\n* Selected model: {}'.format(args.model))
