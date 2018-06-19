@@ -11,8 +11,8 @@ __implemeted_models__ = ['baseline', 'attention', 'tangle']
 
 def build_tangle(mbs_input_shape, timespan_input_shape, vocabulary_size,
                  embedding_size=50, recurrent_units=8, attention_units=8,
-                 dense_units=16,
-                 bidirectional=True, LSTMLayer=LSTM):
+                 dense_units=16, bidirectional=True, LSTMLayer=LSTM,
+                 **kwargs):
     """Build the keras tangle model.
 
 
@@ -111,7 +111,7 @@ def build_tangle(mbs_input_shape, timespan_input_shape, vocabulary_size,
 def build_attention_model(mbs_input_shape, timespan_input_shape,
                           vocabulary_size, embedding_size=50,
                           recurrent_units=8, attention_units=8, dense_units=16,
-                          bidirectional=True, LSTMLayer=LSTM):
+                          bidirectional=True, LSTMLayer=LSTM, **kwargs):
     """Build keras attention model.
 
     This function builds the standard attention model, as in
@@ -202,7 +202,8 @@ def build_attention_model(mbs_input_shape, timespan_input_shape,
 
 def build_baseline_model(mbs_input_shape, timespan_input_shape,
                          vocabulary_size, embedding_size=50, recurrent_units=8,
-                         dense_units=16, bidirectional=True, LSTMLayer=LSTM):
+                         dense_units=16, bidirectional=True, LSTMLayer=LSTM,
+                         **kwargs):
     """Build keras baseline model.
 
     This function builds a baseline model made of Embedding + LSTM layers only.
