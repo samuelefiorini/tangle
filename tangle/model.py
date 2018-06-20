@@ -99,7 +99,7 @@ def build_tangle(mbs_input_shape, timespan_input_shape, vocabulary_size,
     x = Dense(dense_units, activation='linear', name='fc')(x)
     x = Dropout(0.5)(x)
     output = Dense(1, activation='sigmoid', name='fc_output',
-                   activity_regularizer=l2(0.002))(x)
+                   activity_regularizer=l2(0.001))(x)
 
     # Define the model
     model = Model(inputs=[mbs_input, timespan_input],
@@ -191,7 +191,7 @@ def build_attention_model(mbs_input_shape, timespan_input_shape,
     x = Dense(dense_units, activation='linear', name='fc')(x)
     x = Dropout(0.5)(x)
     output = Dense(1, activation='sigmoid', name='fc_output',
-                   activity_regularizer=l2(0.002))(x)
+                   activity_regularizer=l2(0.001))(x)
 
     # Define the model
     model = Model(inputs=[mbs_input],
@@ -274,7 +274,7 @@ def build_baseline_model(mbs_input_shape, timespan_input_shape,
     x = Dense(dense_units, activation='linear', name='fc')(x)
     x = Dropout(0.5)(x)
     output = Dense(1, activation='sigmoid', name='fc_output',
-                   activity_regularizer=l2(0.002))(x)
+                   activity_regularizer=l2(0.001))(x)
 
     # Define the model
     model = Model(inputs=[mbs_input],
