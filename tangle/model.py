@@ -96,7 +96,7 @@ def build_tangle(mbs_input_shape, timespan_input_shape, vocabulary_size,
     # Output
     x = GlobalAveragePooling1D(name='pooling')(x)
     x = Dropout(0.5)(x)
-    x = Dense(dense_units, activation='linear', name='fc')(x)
+    x = Dense(dense_units, activation='relu', name='fc')(x)
     x = Dropout(0.5)(x)
     output = Dense(1, activation='sigmoid', name='fc_output',
                    activity_regularizer=l2(0.001))(x)
@@ -188,7 +188,7 @@ def build_attention_model(mbs_input_shape, timespan_input_shape,
     # Output
     x = GlobalAveragePooling1D(name='pooling')(x)
     x = Dropout(0.5)(x)
-    x = Dense(dense_units, activation='linear', name='fc')(x)
+    x = Dense(dense_units, activation='relu', name='fc')(x)
     x = Dropout(0.5)(x)
     output = Dense(1, activation='sigmoid', name='fc_output',
                    activity_regularizer=l2(0.001))(x)
@@ -271,7 +271,7 @@ def build_baseline_model(mbs_input_shape, timespan_input_shape,
     # Output
     x = GlobalAveragePooling1D(name='pooling')(x1)
     x = Dropout(0.5)(x)
-    x = Dense(dense_units, activation='linear', name='fc')(x)
+    x = Dense(dense_units, activation='relu', name='fc')(x)
     x = Dropout(0.5)(x)
     output = Dense(1, activation='sigmoid', name='fc_output',
                    activity_regularizer=l2(0.001))(x)
