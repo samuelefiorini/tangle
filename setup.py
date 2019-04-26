@@ -1,7 +1,7 @@
 #!/usr/bin/python
 """tangle setup script."""
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 # Package Version
 from tangle import __version__ as version
@@ -33,7 +33,7 @@ setup(
     ],
     license='FreeBSD',
 
-    packages=['tangle'],
+    packages=find_packages(),
     install_requires=['pandas (>=0.22.0)',
                       'setuptools (>=39.0.1)',
                       'numpy (>=1.14.2)',
